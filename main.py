@@ -17,31 +17,32 @@ ctx = {
 
 aio = AudioIO(ctx)
 
-print('Recording')
+while True:
+    print('Recording')
+    aio.start_recording()
 
-aio.start_recording()
-time.sleep(5)
-sound: AudioSegment = aio.finish_recording()
+    input("Press enter to hear what you just played ayy")
+    sound: AudioSegment = aio.finish_recording()
+    print('Finished recording')
 
-print('Finished recording')
+    # print(sound.dBFS)
+    # print(sound.max_dBFS)
+    print(f'Recording duration: {len(sound) / 1000}s')
 
-print(sound.dBFS)
-print(sound.max_dBFS)
-print(f'Clip Duration: {len(sound)}')
+    start = time.time()
+    fuckballs = silence.split_on_silence(sound,
+                        min_silence_len=2000, # this dude will be modified by the user
+                        silence_thresh=-80,  # FIXME: figure this out
+                        keep_silence=100,
+                        seek_step=1)
+    end = time.time()
+    print(f'Processing time to split on silence: {end - start}s')
 
-start = time.time()
-fuckballs = silence.split_on_silence(sound,
-                    min_silence_len=1000, # this dude will be modified buy the user
-                    silence_thresh=-80,  # FIXME: figure this out
-                    keep_silence=100,
-                    seek_step=1)
-end = time.time()
-print("Time elapsed:", end - start)
+    print(f'Found {len(fuckballs)} separate Clips')
+    print(f'Last Clip duration: {len(fuckballs[-1]) / 1000}s')
+    aio.play_audio(fuckballs[-1])
 
-print(f'Found {len(fuckballs)} separate clips')
-aio.play_audio(fuckballs[-1])
-
-print('Finished playback')
+    print('Finished playback')
 
 # Save the recorded data as a WAV file
 # filename = "output.wav"
