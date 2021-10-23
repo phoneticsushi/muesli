@@ -23,6 +23,12 @@ class AudioIO:
         # Terminate the PortAudio interface
         self.p.terminate()
 
+    def is_recording(self) -> bool:
+        if self.recording_thread is not None:
+            return self.recording_thread.is_alive()
+        else:
+            return False
+
     def start_recording(self):
         if self.recording_thread:
             print('DEBUG: start_recording called but already recording')
