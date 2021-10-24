@@ -12,9 +12,10 @@ from audio_io import AudioIO
 
 st.title('Muesli Practice Helper')
 
+
 # Hack the planet
 # To create code that runs only once, we need to
-@st.cache(hash_funcs={audio_io.AudioIO: lambda _: None })
+@st.cache(hash_funcs={audio_io.AudioIO: lambda _: None})
 def get_audio_singleton():
     ctx = {
         # names match pyaudio names
@@ -25,6 +26,7 @@ def get_audio_singleton():
     }
     return AudioIO(ctx)
 
+
 def setup_audio():
     aio = get_audio_singleton()
     # Clear aio's state in case it was recording when streamlit restarted the app
@@ -32,16 +34,18 @@ def setup_audio():
         st.write('Restarted during recording; other sessions may encounter an error')
     return aio
 
+
 def display_audio_clip(clip: AudioSegment):
     clip_with_headers = clip.export(format='wav')
     st.audio(clip_with_headers.read())
+
 
 def display_nonsilence(sound: AudioSegment):
     st.text(f'Recording duration: {len(sound) / 1000}s')
 
     start = time.time()
     all_clips = silence.split_on_silence(sound,
-                                         min_silence_len=2000, # this dude will be modified by the user
+                                         min_silence_len=2000,  # this dude will be modified by the user
                                          silence_thresh=-80,  # FIXME: figure this out
                                          keep_silence=100,
                                          seek_step=1)
@@ -60,9 +64,33 @@ def display_nonsilence(sound: AudioSegment):
             display_audio_clip(clip)
 
 
+def draw_sidebar_with_preferences():
+    with st.sidebar:
+        st.write('Recording preferences:')
+        form = st.form(key='Submit')
+        with form:
+            min_silence_len_ms = st.number_input(
+                label="Minimum Silence Length (ms)",
+                min_value=0,
+                value=2000,
+            )
+            silence_thresh_dbfs = st.number_input(
+                label="Silence Threshold (dBFS)",
+                min_value=-100,
+                max_value=3,
+                value=-80,
+            )
+            submitted = st.form_submit_button('Submit')
+            st.write(submitted)
+            st.write(min_silence_len_ms)
+            st.write(silence_thresh_dbfs)
+
+
 # Main Loop
 
 aio = get_audio_singleton()
+
+draw_sidebar_with_preferences()
 
 # Check to see if we have any output from last run
 sound: AudioSegment = aio.finish_recording()
