@@ -37,29 +37,27 @@ def get_audio_handle() -> AudioIO:
     return st.session_state['aio']
 
 
-def draw_audio_clip_with_plots(clip: AudioSegment, autoplay=False):
-    stft_col, wave_col, player_col = st.columns(3)
-    with player_col:  # Render player first for fastest autoplay
-        st.caption('Clip')
-        clip_file = clip.export(format='wav')
-        display_audio(clip_file, autoplay)
+def draw_clip_plots(clip: AudioSegment, show_graphs=False):
+    with st.expander(label="Pretty Graphs", expanded=show_graphs):
+        wave_col, stft_col, unused_col = st.columns(3)
 
-    # Convert to librosa format to appease librosa
-    # librosa_clip = librosa.load(clip_file)
-    librosa_clip = np.frombuffer(clip.raw_data, dtype=np.int16)
-    librosa_clip = librosa_clip / 32768
+        # Convert clip to librosa format to appease librosa
+        librosa_clip = np.frombuffer(clip.raw_data, dtype=np.int16)
+        librosa_clip = librosa_clip / 32768  # Convert values form int16 to normalized float
 
-    with stft_col:
-        st.caption('STFT')
-        with st.spinner('WAIT'):
-            st.pyplot(plot_stft(librosa_clip, ctx['rate']))
-    with wave_col:
-        st.caption('Waveform')
-        with st.spinner('WAIT'):
+        with wave_col:
+            st.caption('Waveform')
             st.pyplot(plot_waveform(librosa_clip, ctx['rate']))
+        with stft_col:
+            st.caption('STFT')
+            st.pyplot(plot_stft(librosa_clip, ctx['rate']))
+        with unused_col:
+            st.caption('Nothing here yet')
+            # TODO: put something here?
 
 
-def display_audio(clip_file: TemporaryFile, autoplay=False):
+def draw_audio_player(clip: AudioSegment, autoplay=False):
+    clip_file = clip.export(format='wav')
     if autoplay:
         # MASSIVE hack to work around missing autoplay feature in Streamlit
         clip_str = "data:audio/wav;base64,%s" % (base64.b64encode(clip_file.read()).decode())
@@ -96,12 +94,14 @@ def display_nonsilence(sound: AudioSegment):
     if all_clips:
         last_clip = all_clips.pop()
         st.markdown(f'Last Clip duration: {len(last_clip) / 1000}s')
-        draw_audio_clip_with_plots(last_clip, autoplay=True)
+        draw_audio_player(last_clip, autoplay=True)
+        draw_clip_plots(last_clip, show_graphs=True)
 
     if all_clips:
         st.markdown('Other Clips:')
         for clip in reversed(all_clips):
-            draw_audio_clip_with_plots(clip, autoplay=False)
+            draw_audio_player(clip, autoplay=False)
+            draw_clip_plots(clip, show_graphs=False)
 
 
 def draw_sidebar_with_preferences():
@@ -159,4 +159,3 @@ else:
         sound_status.markdown('Recording in progress..')
     else:
         sound_status.markdown('Not recording')
-        # TODO: delay the start recording into a third state?
