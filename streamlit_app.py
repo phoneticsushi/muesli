@@ -57,25 +57,26 @@ def display_nonsilence(sound: AudioSegment):
         st.warning('display_nonsilence called with non-AudioSegment!')
         return
 
-    st.text(f'Recording duration: {len(sound) / 1000}s')
+    st.markdown(f'Recording duration: {len(sound) / 1000}s')
 
-    start = time.time()
-    all_clips = silence.split_on_silence(sound,
-                                         min_silence_len=2000,  # this dude will be modified by the user
-                                         silence_thresh=-80,  # FIXME: figure this out
-                                         keep_silence=100,
-                                         seek_step=1)
-    end = time.time()
-    st.text(f'Processing time to split on silence: {end - start}s')
+    with st.spinner('Splitting on silence...'):
+        start = time.time()
+        all_clips = silence.split_on_silence(sound,
+                                             min_silence_len=2000,  # this dude will be modified by the user
+                                             silence_thresh=-80,  # FIXME: figure this out
+                                             keep_silence=100,
+                                             seek_step=1)
+        end = time.time()
+    st.markdown(f'Processing time to split on silence: {end - start}s')
 
-    st.text(f'Found {len(all_clips)} separate Clip(s)')
+    st.markdown(f'Found {len(all_clips)} separate Clip(s)')
 
     last_clip = all_clips.pop()
-    st.text(f'Last Clip duration: {len(last_clip) / 1000}s')
+    st.markdown(f'Last Clip duration: {len(last_clip) / 1000}s')
     display_audio_clip_with_autoplay_HACK(last_clip)
 
     if all_clips:
-        st.text('Other Clips:')
+        st.markdown('Other Clips:')
         for clip in reversed(all_clips):
             display_audio_clip(clip)
 
@@ -110,27 +111,27 @@ with st.spinner('Initializing Audio...'):
 
 toggled = st.button('Toggle Recording...')
 
-sound_status = st.text('Sample Text')  # TODO: refactor this
+sound_status = st.markdown('Sample Text')  # TODO: refactor this
 
 # Check to see if we have any output from last run
 if toggled:
     if aio.is_recording():
-        sound_status.text('Checking most recent recording...')
+        sound_status.markdown('Checking most recent recording...')
         sound: Optional[AudioSegment] = aio.finish_recording()
         if sound:
-            sound_status.text('Splitting most recent recording on silence...')
+            sound_status.markdown('Splitting most recent recording on silence...')
             display_nonsilence(sound)
-            sound_status.text('Recording is ready!')
+            sound_status.markdown('Recording is ready!')
             send_balloons_if_lucky()
         else:
-            sound_status.text('How are you able to see this?')
+            sound_status.markdown('How are you able to see this?')
     else:
-        sound_status.text('Recording started...')
+        sound_status.markdown('Recording started...')
         aio.start_recording()
 
 else:
     if aio.is_recording():
-        sound_status.text('Recording in progress..')
+        sound_status.markdown('Recording in progress..')
     else:
-        sound_status.text('Not recording')
+        sound_status.markdown('Not recording')
         # TODO: delay the start recording into a third state?
