@@ -1,3 +1,5 @@
+import collections
+import itertools
 import time
 import random
 from typing import Optional
@@ -36,6 +38,7 @@ def get_audio_handle() -> AudioIO:
     return st.session_state['aio']
 
 
+# TODO: separate computation and drawing so we can cache this
 def draw_clip_plots(clip: AudioClip, show_graphs=False):
     with st.expander(label="Pretty Graphs", expanded=show_graphs):
         wave_col, stft_col, unused_col = st.columns(3)
@@ -61,7 +64,7 @@ def draw_clip_plots(clip: AudioClip, show_graphs=False):
             # TODO: put something here?
 
 
-# TODO: move name out of here?
+# TODO: separate computation and drawing so we can cache this
 def draw_audio_player(clip: AudioClip, autoplay=False):
     cols = st.columns(2)
 
@@ -84,44 +87,52 @@ def draw_audio_player(clip: AudioClip, autoplay=False):
             st.audio(segment_file.read())
 
 
-def display_nonsilence(sound: AudioSegment):
+def add_sound_to_clips(sound: AudioSegment):
     if not isinstance(sound, AudioSegment):
         st.warning('display_nonsilence called with non-AudioSegment!')
         return
 
-    cols = st.columns(3)
+    with st.spinner('Splitting on silence...'):
+        start = time.time()
+        current_segments = silence.split_on_silence(sound,
+                                                    min_silence_len=2000,  # this dude will be modified by the user
+                                                    silence_thresh=-80,  # FIXME: figure this out
+                                                    keep_silence=100,
+                                                    seek_step=1)
+        end = time.time()
 
+    cols = st.columns(3)
     with cols[0]:
         st.caption('Recording time')
         st.markdown(f'{len(sound) / 1000}s')
-
-    with st.spinner('Splitting on silence...'):
-        start = time.time()
-        all_segments = silence.split_on_silence(sound,
-                                             min_silence_len=2000,  # this dude will be modified by the user
-                                             silence_thresh=-80,  # FIXME: figure this out
-                                             keep_silence=100,
-                                             seek_step=1)
-        end = time.time()
-
     with cols[1]:
         st.caption('Processing Time')
         st.markdown(f'{end - start:.3f}s')
-
     with cols[2]:
-        st.caption('Clips Found')
-        st.markdown(len(all_segments))
+        st.caption('New Clips Found')
+        st.markdown(len(current_segments))
 
-    if all_segments:
-        last_clip = AudioClip(audio_segment=all_segments.pop(), selected=True)
-        st.markdown('Last Clip:')
-        draw_audio_player(last_clip, autoplay=True)
-        draw_clip_plots(last_clip, show_graphs=True)
+    all_clips = st.session_state['all_clips']
 
-    if all_segments:
+    if len(current_segments) > 1:
+        for segment in current_segments[:-1]:
+            all_clips.appendleft(AudioClip(audio_segment=segment, selected=False))
+
+    if len(current_segments) > 0:
+        all_clips.appendleft(AudioClip(audio_segment=current_segments[-1], selected=True))
+
+
+def draw_all_audio_clips():
+    all_clips = st.session_state['all_clips']
+
+    if all_clips:
+        st.markdown('Latest Clip:')
+        draw_audio_player(all_clips[0], autoplay=True)
+        draw_clip_plots(all_clips[0], show_graphs=True)
+
+    if len(all_clips) > 1:
         st.markdown('Other Clips:')
-        for segment in reversed(all_segments):
-            clip = AudioClip(audio_segment=segment, selected=False)
+        for clip in itertools.islice(all_clips, 1, None, 1):
             draw_audio_player(clip, autoplay=False)
             draw_clip_plots(clip, show_graphs=False)
 
@@ -149,6 +160,9 @@ def draw_sidebar_with_preferences():
 
 # Set up UI Elements
 
+if 'all_clips' not in st.session_state:
+    st.session_state['all_clips'] = collections.deque(maxlen=8)  # TODO: remove maxLen?
+
 st.title('Muesli Practice Helper')
 
 #draw_sidebar_with_preferences()
@@ -167,9 +181,10 @@ if toggled:
         sound: Optional[AudioSegment] = aio.finish_recording()
         if sound:
             sound_status.markdown('Splitting most recent recording on silence...')
-            display_nonsilence(sound)
+            add_sound_to_clips(sound)
             sound_status.markdown('Recording is ready!')
             send_balloons_if_lucky()
+            draw_all_audio_clips()
         else:
             sound_status.markdown('How are you able to see this?')
     else:
@@ -181,3 +196,4 @@ else:
         sound_status.markdown('Recording in progress..')
     else:
         sound_status.markdown('Not recording')
+        draw_all_audio_clips()
