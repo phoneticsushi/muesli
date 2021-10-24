@@ -7,6 +7,7 @@ from pydub import AudioSegment
 
 class AudioIO:
     def __init__(self, ctx):
+        print('DEBUG: initializing AudioIO')
         self.p = pyaudio.PyAudio()  # Create an interface to PortAudio
         self.ctx = ctx
 
@@ -18,6 +19,7 @@ class AudioIO:
         self.should_record = False
 
     def __del__(self):
+        print('DEBUG: tearing down AudioIO')
         self.in_stream.close()
         self.out_stream.close()
         # Terminate the PortAudio interface

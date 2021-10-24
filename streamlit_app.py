@@ -13,26 +13,18 @@ from audio_io import AudioIO
 st.title('Muesli Practice Helper')
 
 
-# Hack the planet
-# To create code that runs only once, we need to
-@st.cache(hash_funcs={audio_io.AudioIO: lambda _: None})
-def get_audio_singleton():
-    ctx = {
-        # names match pyaudio names
-        "frames_per_buffer": 1024,  # Record in chunks of 1024 samples
-        "format": pyaudio.paInt16,
-        "channels": 2,
-        "rate": 44100,  # Record at 44100 samples per second
-    }
-    return AudioIO(ctx)
-
-
-def setup_audio():
-    aio = get_audio_singleton()
-    # Clear aio's state in case it was recording when streamlit restarted the app
-    if aio.finish_recording():
-        st.write('Restarted during recording; other sessions may encounter an error')
-    return aio
+# Initialize audio only once per session as it's an expensive operation
+def get_audio_handle():
+    if 'aio' not in st.session_state:
+        ctx = {
+            # names match pyaudio names
+            "frames_per_buffer": 1024,  # Record in chunks of 1024 samples
+            "format": pyaudio.paInt16,
+            "channels": 2,
+            "rate": 44100,  # Record at 44100 samples per second
+        }
+        st.session_state['aio'] = AudioIO(ctx)
+    return st.session_state['aio']
 
 
 def display_audio_clip(clip: AudioSegment):
@@ -85,21 +77,21 @@ def draw_sidebar_with_preferences():
             st.write(min_silence_len_ms)
             st.write(silence_thresh_dbfs)
 
+# Set up UI Elements
 
-# Main Loop
-
-aio = get_audio_singleton()
+sound_status = st.text('Initializing Audio...')
+aio = get_audio_handle()
 
 draw_sidebar_with_preferences()
 
 # Check to see if we have any output from last run
 sound: AudioSegment = aio.finish_recording()
 if sound:
-    sound_status = st.text('Checking most recent recording...')
+    sound_status.text('Checking most recent recording...')
     display_nonsilence(sound)
     sound_status.text('Checking most recent recording...Done!')
     st.button('Start Next Recording...')
 else:
-    st.text('Recording...')
+    sound_status.text('Recording...')
     aio.start_recording()
     st.button('Finish Recording...')
