@@ -1,7 +1,7 @@
-from typing import *
 from datetime import datetime
 from pydub import AudioSegment
 from name_generator import get_random_name
+import audioplots
 
 
 class AudioClip:
@@ -11,6 +11,11 @@ class AudioClip:
         self.selected: bool = selected
 
         self.audio_segment: AudioSegment = audio_segment
+
+        librosa_clip = audioplots.audiosegment_to_librosa(audio_segment)
+        # TODO: remove hardcoded sample rate
+        self.waveform_fig = audioplots.plot_waveform(librosa_clip, 44100)
+        self.stft_fig = audioplots.plot_stft(librosa_clip, 44100)
 
     def __hash__(self):
         return self.creation_time.__hash__()

@@ -38,25 +38,20 @@ def get_audio_handle() -> AudioIO:
     return st.session_state['aio']
 
 
-# TODO: separate computation and drawing so we can cache this
-def draw_clip_plots(clip: AudioClip, show_graphs=False):
-    with st.expander(label="Pretty Graphs", expanded=show_graphs):
+def draw_clip_plots(clip: AudioClip, expand_graphs=False):
+    with st.expander(label="Pretty Graphs", expanded=expand_graphs):
         wave_col, stft_col, unused_col = st.columns(3)
-
-        # Convert clip to librosa format to appease librosa
-        librosa_clip = np.frombuffer(clip.audio_segment.raw_data, dtype=np.int16)
-        librosa_clip = librosa_clip / 32768  # Convert values form int16 to normalized float
 
         with wave_col:
             st.caption('Duration')
             st.markdown(f'{len(clip.audio_segment) / 1000}s')
             st.caption('Waveform')
-            st.pyplot(plot_waveform(librosa_clip, ctx['rate']))
+            st.pyplot(clip.waveform_fig)
         with stft_col:
             st.caption('Average dBFS')
             st.markdown(f'{clip.audio_segment.dBFS:.3f}')
             st.caption('STFT')
-            st.pyplot(plot_stft(librosa_clip, ctx['rate']))
+            st.pyplot(clip.stft_fig)
         with unused_col:
             st.caption('Max dBFS')
             st.markdown(f'{clip.audio_segment.max_dBFS:.3f}')
@@ -64,12 +59,11 @@ def draw_clip_plots(clip: AudioClip, show_graphs=False):
             # TODO: put something here?
 
 
-# TODO: separate computation and drawing so we can cache this
 def draw_audio_player(clip: AudioClip, autoplay=False):
-    cols = st.columns(2)
+    cols = st.columns([1, 2])
 
     with cols[0]:
-        st.markdown(clip.get_display_name_markdown())
+        st.markdown(f'#### {clip.get_display_name_markdown()}')
 
     with cols[1]:
         segment_file = clip.audio_segment.export(format='wav')
@@ -77,7 +71,7 @@ def draw_audio_player(clip: AudioClip, autoplay=False):
             # MASSIVE hack to work around missing autoplay feature in Streamlit
             clip_str = "data:audio/wav;base64,%s" % (base64.b64encode(segment_file.read()).decode())
             clip_html = """
-                            <audio autoplay="autoplay" controls class="stAudio">
+                            <audio autoplay="autoplay" controls style="width: 100%%" class="stAudio">
                                 <source src="%s" type="audio/wav">
                                 Your browser does not support the audio element.
                             </audio>
@@ -114,12 +108,19 @@ def add_sound_to_clips(sound: AudioSegment):
 
     all_clips = st.session_state['all_clips']
 
-    if len(current_segments) > 1:
-        for segment in current_segments[:-1]:
-            all_clips.appendleft(AudioClip(audio_segment=segment, selected=False))
+    with st.spinner('Creating clips...'):
+        if len(current_segments) > 1:
+            for segment in current_segments[:-1]:
+                all_clips.appendleft(AudioClip(audio_segment=segment, selected=False))
 
-    if len(current_segments) > 0:
-        all_clips.appendleft(AudioClip(audio_segment=current_segments[-1], selected=True))
+        if len(current_segments) > 0:
+            all_clips.appendleft(AudioClip(audio_segment=current_segments[-1], selected=True))
+
+
+# TODO: fix contol flow?
+def draw_audio_clip(clip: AudioClip, auto_show=False):
+    draw_audio_player(clip, autoplay=auto_show)
+    draw_clip_plots(clip, expand_graphs=auto_show)
 
 
 def draw_all_audio_clips():
@@ -127,14 +128,12 @@ def draw_all_audio_clips():
 
     if all_clips:
         st.markdown('Latest Clip:')
-        draw_audio_player(all_clips[0], autoplay=True)
-        draw_clip_plots(all_clips[0], show_graphs=True)
+        draw_audio_clip(all_clips[0], auto_show=True)
 
     if len(all_clips) > 1:
         st.markdown('Other Clips:')
         for clip in itertools.islice(all_clips, 1, None, 1):
-            draw_audio_player(clip, autoplay=False)
-            draw_clip_plots(clip, show_graphs=False)
+            draw_audio_clip(clip, auto_show=False)
 
 
 def draw_sidebar_with_preferences():
@@ -161,7 +160,15 @@ def draw_sidebar_with_preferences():
 # Set up UI Elements
 
 if 'all_clips' not in st.session_state:
-    st.session_state['all_clips'] = collections.deque(maxlen=8)  # TODO: remove maxLen?
+    st.session_state['all_clips'] = collections.deque(maxlen=100)  # TODO: remove maxLen?
+
+st.set_page_config(
+    page_title=None,
+    page_icon=None,
+    layout='wide',
+    initial_sidebar_state='auto',
+    menu_items=None
+)
 
 st.title('Muesli Practice Helper')
 

@@ -3,11 +3,19 @@ from matplotlib import pyplot as plt
 import librosa
 from librosa import display
 
+def audiosegment_to_librosa(segment):
+    # Convert clip to librosa format to appease librosa
+    librosa_clip = np.frombuffer(segment.raw_data, dtype=np.int16)
+    librosa_clip = librosa_clip / 32768  # Convert values form int16 to normalized float
+    return librosa_clip
+
+
 def plot_waveform(y, sample_rate):
     plt.style.use('dark_background')
     fig, ax = plt.subplots()
     img = librosa.display.waveplot(y, sr=sample_rate, x_axis='time', ax=ax)
     return fig
+
 
 def plot_stft(y, sample_rate):
     plt.style.use('dark_background')
