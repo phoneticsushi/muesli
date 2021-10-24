@@ -21,7 +21,7 @@ def plot_stft(y, sample_rate):
     D = librosa.stft(y)  # STFT of y
     S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
     fig, ax = plt.subplots()
-    img = librosa.display.specshow(S_db, x_axis='time', y_axis='linear', ax=ax)
+    img = librosa.display.specshow(S_db, x_axis='time', y_axis='fft_note', ax=ax)
     fig.colorbar(img, ax=ax, format="%+2.f dB")
     return fig
 
