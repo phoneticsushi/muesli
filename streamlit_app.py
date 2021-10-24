@@ -15,6 +15,7 @@ import audio_io
 from audio_io import AudioIO
 
 from audioplots import *
+from name_generator import get_random_name
 
 ctx = {
     # names match pyaudio names
@@ -62,20 +63,28 @@ def draw_clip_plots(clip: AudioSegment, show_graphs=False):
             # TODO: put something here?
 
 
+# TODO: move name out of here?
 def draw_audio_player(clip: AudioSegment, autoplay=False):
-    clip_file = clip.export(format='wav')
-    if autoplay:
-        # MASSIVE hack to work around missing autoplay feature in Streamlit
-        clip_str = "data:audio/wav;base64,%s" % (base64.b64encode(clip_file.read()).decode())
-        clip_html = """
-                        <audio autoplay="autoplay" controls class="stAudio">
-                            <source src="%s" type="audio/wav">
-                            Your browser does not support the audio element.
-                        </audio>
-                    """ % clip_str
-        st.markdown(clip_html, unsafe_allow_html=True)
-    else:
-        st.audio(clip_file.read())
+    cols = st.columns(2)
+
+    with cols[0]:
+        clip_name = get_random_name()
+        st.markdown(clip_name)
+
+    with cols[1]:
+        clip_file = clip.export(format='wav')
+        if autoplay:
+            # MASSIVE hack to work around missing autoplay feature in Streamlit
+            clip_str = "data:audio/wav;base64,%s" % (base64.b64encode(clip_file.read()).decode())
+            clip_html = """
+                            <audio autoplay="autoplay" controls class="stAudio">
+                                <source src="%s" type="audio/wav">
+                                Your browser does not support the audio element.
+                            </audio>
+                        """ % clip_str
+            st.markdown(clip_html, unsafe_allow_html=True)
+        else:
+            st.audio(clip_file.read())
 
 
 def display_nonsilence(sound: AudioSegment):
