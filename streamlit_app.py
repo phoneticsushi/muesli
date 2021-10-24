@@ -46,12 +46,18 @@ def draw_clip_plots(clip: AudioSegment, show_graphs=False):
         librosa_clip = librosa_clip / 32768  # Convert values form int16 to normalized float
 
         with wave_col:
+            st.caption('Duration')
+            st.markdown(f'{len(clip) / 1000}s')
             st.caption('Waveform')
             st.pyplot(plot_waveform(librosa_clip, ctx['rate']))
         with stft_col:
+            st.caption('Average dBFS')
+            st.markdown(clip.dBFS)
             st.caption('STFT')
             st.pyplot(plot_stft(librosa_clip, ctx['rate']))
         with unused_col:
+            st.caption('Max dBFS')
+            st.markdown(clip.max_dBFS)
             st.caption('Nothing here yet')
             # TODO: put something here?
 
@@ -77,7 +83,11 @@ def display_nonsilence(sound: AudioSegment):
         st.warning('display_nonsilence called with non-AudioSegment!')
         return
 
-    st.markdown(f'Recording duration: {len(sound) / 1000}s')
+    cols = st.columns(3)
+
+    with cols[0]:
+        st.caption('Recording time')
+        st.markdown(f'{len(sound) / 1000}s')
 
     with st.spinner('Splitting on silence...'):
         start = time.time()
@@ -87,13 +97,18 @@ def display_nonsilence(sound: AudioSegment):
                                              keep_silence=100,
                                              seek_step=1)
         end = time.time()
-    st.markdown(f'Processing time to split on silence: {end - start}s')
 
-    st.markdown(f'Found {len(all_clips)} separate Clip(s)')
+    with cols[1]:
+        st.caption('Processing Time')
+        st.markdown(f'{end - start}s')
+
+    with cols[2]:
+        st.caption('Clips Found')
+        st.markdown(len(all_clips))
 
     if all_clips:
         last_clip = all_clips.pop()
-        st.markdown(f'Last Clip duration: {len(last_clip) / 1000}s')
+        st.markdown('Last Clip:')
         draw_audio_player(last_clip, autoplay=True)
         draw_clip_plots(last_clip, show_graphs=True)
 
@@ -109,20 +124,20 @@ def draw_sidebar_with_preferences():
         st.write('Recording preferences:')
         form = st.form(key='Submit')
         with form:
-            min_silence_len_ms = st.number_input(
-                label="Minimum Silence Length (ms)",
+            min_silence_len_s = st.number_input(
+                label="Minimum Silence Length (s)",
                 min_value=0,
-                value=2000,
+                value=2,
             )
             silence_thresh_dbfs = st.number_input(
                 label="Silence Threshold (dBFS)",
-                min_value=-100,
+                min_value=-200,
                 max_value=3,
                 value=-80,
             )
             submitted = st.form_submit_button('Submit')
             st.write(submitted)
-            st.write(min_silence_len_ms)
+            st.write(min_silence_len_s)
             st.write(silence_thresh_dbfs)
 
 # Set up UI Elements
