@@ -1,4 +1,7 @@
 import time
+import random
+from typing import Optional
+import base64  # For autoplay hack
 
 import streamlit as st
 import pandas as pd
@@ -13,8 +16,25 @@ from audio_io import AudioIO
 st.title('Muesli Practice Helper')
 
 
+def display_audio_clip_with_autoplay_HACK(clip: AudioSegment):
+    clip_with_headers = clip.export(format='wav')
+
+    clip_str = "data:audio/wav;base64,%s" % (base64.b64encode(clip_with_headers.read()).decode())
+    clip_html = """
+                    <audio autoplay="autoplay" controls class="stAudio">
+                        <source src="%s" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                """ % clip_str
+    st.markdown(clip_html, unsafe_allow_html=True)
+
+def send_balloons_if_lucky():
+    if random.randint(0, 100) == 0:
+        st.balloons()
+
+
 # Initialize audio only once per session as it's an expensive operation
-def get_audio_handle():
+def get_audio_handle() -> AudioIO:
     if 'aio' not in st.session_state:
         ctx = {
             # names match pyaudio names
@@ -33,6 +53,10 @@ def display_audio_clip(clip: AudioSegment):
 
 
 def display_nonsilence(sound: AudioSegment):
+    if not isinstance(sound, AudioSegment):
+        st.warning('display_nonsilence called with non-AudioSegment!')
+        return
+
     st.text(f'Recording duration: {len(sound) / 1000}s')
 
     start = time.time()
@@ -48,7 +72,7 @@ def display_nonsilence(sound: AudioSegment):
 
     last_clip = all_clips.pop()
     st.text(f'Last Clip duration: {len(last_clip) / 1000}s')
-    display_audio_clip(last_clip)
+    display_audio_clip_with_autoplay_HACK(last_clip)
 
     if all_clips:
         st.text('Other Clips:')
@@ -79,19 +103,34 @@ def draw_sidebar_with_preferences():
 
 # Set up UI Elements
 
-sound_status = st.text('Initializing Audio...')
-aio = get_audio_handle()
-
 draw_sidebar_with_preferences()
 
+with st.spinner('Initializing Audio...'):
+    aio = get_audio_handle()
+
+toggled = st.button('Toggle Recording...')
+
+sound_status = st.text('Sample Text')  # TODO: refactor this
+
 # Check to see if we have any output from last run
-sound: AudioSegment = aio.finish_recording()
-if sound:
-    sound_status.text('Checking most recent recording...')
-    display_nonsilence(sound)
-    sound_status.text('Checking most recent recording...Done!')
-    st.button('Start Next Recording...')
+if toggled:
+    if aio.is_recording():
+        sound_status.text('Checking most recent recording...')
+        sound: Optional[AudioSegment] = aio.finish_recording()
+        if sound:
+            sound_status.text('Splitting most recent recording on silence...')
+            display_nonsilence(sound)
+            sound_status.text('Recording is ready!')
+            send_balloons_if_lucky()
+        else:
+            sound_status.text('How are you able to see this?')
+    else:
+        sound_status.text('Recording started...')
+        aio.start_recording()
+
 else:
-    sound_status.text('Recording...')
-    aio.start_recording()
-    st.button('Finish Recording...')
+    if aio.is_recording():
+        sound_status.text('Recording in progress..')
+    else:
+        sound_status.text('Not recording')
+        # TODO: delay the start recording into a third state?
