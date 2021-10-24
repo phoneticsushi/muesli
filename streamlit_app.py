@@ -1,4 +1,3 @@
-from tempfile import TemporaryFile
 import time
 import random
 from typing import Optional
@@ -11,11 +10,10 @@ import numpy as np
 import pyaudio
 from pydub import AudioSegment, silence
 
-import audio_io
 from audio_io import AudioIO
 
 from audioplots import *
-from name_generator import get_random_name
+from containers import *
 
 ctx = {
     # names match pyaudio names
@@ -38,44 +36,43 @@ def get_audio_handle() -> AudioIO:
     return st.session_state['aio']
 
 
-def draw_clip_plots(clip: AudioSegment, show_graphs=False):
+def draw_clip_plots(clip: AudioClip, show_graphs=False):
     with st.expander(label="Pretty Graphs", expanded=show_graphs):
         wave_col, stft_col, unused_col = st.columns(3)
 
         # Convert clip to librosa format to appease librosa
-        librosa_clip = np.frombuffer(clip.raw_data, dtype=np.int16)
+        librosa_clip = np.frombuffer(clip.audio_segment.raw_data, dtype=np.int16)
         librosa_clip = librosa_clip / 32768  # Convert values form int16 to normalized float
 
         with wave_col:
             st.caption('Duration')
-            st.markdown(f'{len(clip) / 1000}s')
+            st.markdown(f'{len(clip.audio_segment) / 1000}s')
             st.caption('Waveform')
             st.pyplot(plot_waveform(librosa_clip, ctx['rate']))
         with stft_col:
             st.caption('Average dBFS')
-            st.markdown(clip.dBFS)
+            st.markdown(f'{clip.audio_segment.dBFS:.3f}')
             st.caption('STFT')
             st.pyplot(plot_stft(librosa_clip, ctx['rate']))
         with unused_col:
             st.caption('Max dBFS')
-            st.markdown(clip.max_dBFS)
+            st.markdown(f'{clip.audio_segment.max_dBFS:.3f}')
             st.caption('Nothing here yet')
             # TODO: put something here?
 
 
 # TODO: move name out of here?
-def draw_audio_player(clip: AudioSegment, autoplay=False):
+def draw_audio_player(clip: AudioClip, autoplay=False):
     cols = st.columns(2)
 
     with cols[0]:
-        clip_name = get_random_name()
-        st.markdown(clip_name)
+        st.markdown(clip.get_display_name_markdown())
 
     with cols[1]:
-        clip_file = clip.export(format='wav')
+        segment_file = clip.audio_segment.export(format='wav')
         if autoplay:
             # MASSIVE hack to work around missing autoplay feature in Streamlit
-            clip_str = "data:audio/wav;base64,%s" % (base64.b64encode(clip_file.read()).decode())
+            clip_str = "data:audio/wav;base64,%s" % (base64.b64encode(segment_file.read()).decode())
             clip_html = """
                             <audio autoplay="autoplay" controls class="stAudio">
                                 <source src="%s" type="audio/wav">
@@ -84,7 +81,7 @@ def draw_audio_player(clip: AudioSegment, autoplay=False):
                         """ % clip_str
             st.markdown(clip_html, unsafe_allow_html=True)
         else:
-            st.audio(clip_file.read())
+            st.audio(segment_file.read())
 
 
 def display_nonsilence(sound: AudioSegment):
@@ -100,7 +97,7 @@ def display_nonsilence(sound: AudioSegment):
 
     with st.spinner('Splitting on silence...'):
         start = time.time()
-        all_clips = silence.split_on_silence(sound,
+        all_segments = silence.split_on_silence(sound,
                                              min_silence_len=2000,  # this dude will be modified by the user
                                              silence_thresh=-80,  # FIXME: figure this out
                                              keep_silence=100,
@@ -109,21 +106,22 @@ def display_nonsilence(sound: AudioSegment):
 
     with cols[1]:
         st.caption('Processing Time')
-        st.markdown(f'{end - start}s')
+        st.markdown(f'{end - start:.3f}s')
 
     with cols[2]:
         st.caption('Clips Found')
-        st.markdown(len(all_clips))
+        st.markdown(len(all_segments))
 
-    if all_clips:
-        last_clip = all_clips.pop()
+    if all_segments:
+        last_clip = AudioClip(audio_segment=all_segments.pop(), selected=True)
         st.markdown('Last Clip:')
         draw_audio_player(last_clip, autoplay=True)
         draw_clip_plots(last_clip, show_graphs=True)
 
-    if all_clips:
+    if all_segments:
         st.markdown('Other Clips:')
-        for clip in reversed(all_clips):
+        for segment in reversed(all_segments):
+            clip = AudioClip(audio_segment=segment, selected=False)
             draw_audio_player(clip, autoplay=False)
             draw_clip_plots(clip, show_graphs=False)
 
@@ -153,7 +151,7 @@ def draw_sidebar_with_preferences():
 
 st.title('Muesli Practice Helper')
 
-draw_sidebar_with_preferences()
+#draw_sidebar_with_preferences()
 
 with st.spinner('Initializing Audio...'):
     aio = get_audio_handle()
