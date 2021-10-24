@@ -4,10 +4,9 @@ import librosa
 from librosa import display
 
 def audiosegment_to_librosa(segment):
-    # Convert clip to librosa format to appease librosa
-    librosa_clip = np.frombuffer(segment.raw_data, dtype=np.int16)
-    librosa_clip = librosa_clip / 32768  # Convert values form int16 to normalized float
-    return librosa_clip
+    segment_file = segment.export(format='wav')
+    y, sr = librosa.load(path=segment_file, sr=None)
+    return y
 
 
 def plot_waveform(y, sample_rate):
@@ -25,3 +24,7 @@ def plot_stft(y, sample_rate):
     img = librosa.display.specshow(S_db, x_axis='time', y_axis='linear', ax=ax)
     fig.colorbar(img, ax=ax, format="%+2.f dB")
     return fig
+
+
+def estimate_tempo(y, sample_rate, approximate_bpm):
+    return librosa.beat.tempo(y, sr=sample_rate, start_bpm=approximate_bpm)[0]

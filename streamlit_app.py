@@ -38,27 +38,6 @@ def get_audio_handle() -> AudioIO:
     return st.session_state['aio']
 
 
-def draw_clip_plots(clip: AudioClip, expand_graphs=False):
-    with st.expander(label="Pretty Graphs", expanded=expand_graphs):
-        wave_col, stft_col, unused_col = st.columns(3)
-
-        with wave_col:
-            st.caption('Duration')
-            st.markdown(f'{len(clip.audio_segment) / 1000}s')
-            st.caption('Waveform')
-            st.pyplot(clip.waveform_fig)
-        with stft_col:
-            st.caption('Average dBFS')
-            st.markdown(f'{clip.audio_segment.dBFS:.3f}')
-            st.caption('STFT')
-            st.pyplot(clip.stft_fig)
-        with unused_col:
-            st.caption('Max dBFS')
-            st.markdown(f'{clip.audio_segment.max_dBFS:.3f}')
-            st.caption('Nothing here yet')
-            # TODO: put something here?
-
-
 def draw_audio_player(clip: AudioClip, autoplay=False):
     cols = st.columns([1, 2])
 
@@ -117,10 +96,9 @@ def add_sound_to_clips(sound: AudioSegment):
             all_clips.appendleft(AudioClip(audio_segment=current_segments[-1], selected=True))
 
 
-# TODO: fix contol flow?
 def draw_audio_clip(clip: AudioClip, auto_show=False):
     draw_audio_player(clip, autoplay=auto_show)
-    draw_clip_plots(clip, expand_graphs=auto_show)
+    clip.draw_clip_deets(expand_deets=auto_show)
 
 
 def draw_all_audio_clips():
@@ -151,6 +129,12 @@ def draw_sidebar_with_preferences():
                 min_value=-200,
                 max_value=3,
                 value=-80,
+            )
+            approximate_bpm = st.number_input(
+                label="Approximate Tempo (BPM; for tempo estimation)",
+                min_value=0,
+                max_value=300,
+                value=100,
             )
             submitted = st.form_submit_button('Submit')
             st.write(submitted)
