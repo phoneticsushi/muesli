@@ -16,18 +16,6 @@ from audio_io import AudioIO
 st.title('Muesli Practice Helper')
 
 
-def display_audio_clip_with_autoplay_HACK(clip: AudioSegment):
-    clip_with_headers = clip.export(format='wav')
-
-    clip_str = "data:audio/wav;base64,%s" % (base64.b64encode(clip_with_headers.read()).decode())
-    clip_html = """
-                    <audio autoplay="autoplay" controls class="stAudio">
-                        <source src="%s" type="audio/wav">
-                        Your browser does not support the audio element.
-                    </audio>
-                """ % clip_str
-    st.markdown(clip_html, unsafe_allow_html=True)
-
 def send_balloons_if_lucky():
     if random.randint(0, 100) == 0:
         st.balloons()
@@ -47,9 +35,20 @@ def get_audio_handle() -> AudioIO:
     return st.session_state['aio']
 
 
-def display_audio_clip(clip: AudioSegment):
+def display_audio_clip(clip: AudioSegment, autoplay=False):
     clip_with_headers = clip.export(format='wav')
-    st.audio(clip_with_headers.read())
+    if autoplay:
+        # MASSIVE hack to work around missing autoplay feature in Streamlit
+        clip_str = "data:audio/wav;base64,%s" % (base64.b64encode(clip_with_headers.read()).decode())
+        clip_html = """
+                        <audio autoplay="autoplay" controls class="stAudio">
+                            <source src="%s" type="audio/wav">
+                            Your browser does not support the audio element.
+                        </audio>
+                    """ % clip_str
+        st.markdown(clip_html, unsafe_allow_html=True)
+    else:
+        st.audio(clip_with_headers.read())
 
 
 def display_nonsilence(sound: AudioSegment):
@@ -73,12 +72,12 @@ def display_nonsilence(sound: AudioSegment):
 
     last_clip = all_clips.pop()
     st.markdown(f'Last Clip duration: {len(last_clip) / 1000}s')
-    display_audio_clip_with_autoplay_HACK(last_clip)
+    display_audio_clip(last_clip, autoplay=True)
 
     if all_clips:
         st.markdown('Other Clips:')
         for clip in reversed(all_clips):
-            display_audio_clip(clip)
+            display_audio_clip(clip, autoplay=False)
 
 
 def draw_sidebar_with_preferences():
