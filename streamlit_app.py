@@ -1,3 +1,4 @@
+from tempfile import TemporaryFile
 import time
 import random
 from typing import Optional
@@ -13,7 +14,15 @@ from pydub import AudioSegment, silence
 import audio_io
 from audio_io import AudioIO
 
-st.title('Muesli Practice Helper')
+from audioplots import *
+
+ctx = {
+    # names match pyaudio names
+    "frames_per_buffer": 1024,  # Record in chunks of 1024 samples
+    "format": pyaudio.paInt16,
+    "channels": 2,
+    "rate": 44100,  # Record at 44100 samples per second
+}
 
 
 def send_balloons_if_lucky():
@@ -24,22 +33,36 @@ def send_balloons_if_lucky():
 # Initialize audio only once per session as it's an expensive operation
 def get_audio_handle() -> AudioIO:
     if 'aio' not in st.session_state:
-        ctx = {
-            # names match pyaudio names
-            "frames_per_buffer": 1024,  # Record in chunks of 1024 samples
-            "format": pyaudio.paInt16,
-            "channels": 2,
-            "rate": 44100,  # Record at 44100 samples per second
-        }
         st.session_state['aio'] = AudioIO(ctx)
     return st.session_state['aio']
 
 
-def display_audio_clip(clip: AudioSegment, autoplay=False):
-    clip_with_headers = clip.export(format='wav')
+def draw_audio_clip_with_plots(clip: AudioSegment, autoplay=False):
+    stft_col, wave_col, player_col = st.columns(3)
+    with player_col:  # Render player first for fastest autoplay
+        st.caption('Clip')
+        clip_file = clip.export(format='wav')
+        display_audio(clip_file, autoplay)
+
+    # Convert to librosa format to appease librosa
+    # librosa_clip = librosa.load(clip_file)
+    librosa_clip = np.frombuffer(clip.raw_data, dtype=np.int16)
+    librosa_clip = librosa_clip / 32768
+
+    with stft_col:
+        st.caption('STFT')
+        with st.spinner('WAIT'):
+            st.pyplot(plot_stft(librosa_clip, ctx['rate']))
+    with wave_col:
+        st.caption('Waveform')
+        with st.spinner('WAIT'):
+            st.pyplot(plot_waveform(librosa_clip, ctx['rate']))
+
+
+def display_audio(clip_file: TemporaryFile, autoplay=False):
     if autoplay:
         # MASSIVE hack to work around missing autoplay feature in Streamlit
-        clip_str = "data:audio/wav;base64,%s" % (base64.b64encode(clip_with_headers.read()).decode())
+        clip_str = "data:audio/wav;base64,%s" % (base64.b64encode(clip_file.read()).decode())
         clip_html = """
                         <audio autoplay="autoplay" controls class="stAudio">
                             <source src="%s" type="audio/wav">
@@ -48,7 +71,7 @@ def display_audio_clip(clip: AudioSegment, autoplay=False):
                     """ % clip_str
         st.markdown(clip_html, unsafe_allow_html=True)
     else:
-        st.audio(clip_with_headers.read())
+        st.audio(clip_file.read())
 
 
 def display_nonsilence(sound: AudioSegment):
@@ -70,14 +93,15 @@ def display_nonsilence(sound: AudioSegment):
 
     st.markdown(f'Found {len(all_clips)} separate Clip(s)')
 
-    last_clip = all_clips.pop()
-    st.markdown(f'Last Clip duration: {len(last_clip) / 1000}s')
-    display_audio_clip(last_clip, autoplay=True)
+    if all_clips:
+        last_clip = all_clips.pop()
+        st.markdown(f'Last Clip duration: {len(last_clip) / 1000}s')
+        draw_audio_clip_with_plots(last_clip, autoplay=True)
 
     if all_clips:
         st.markdown('Other Clips:')
         for clip in reversed(all_clips):
-            display_audio_clip(clip, autoplay=False)
+            draw_audio_clip_with_plots(clip, autoplay=False)
 
 
 def draw_sidebar_with_preferences():
@@ -102,6 +126,8 @@ def draw_sidebar_with_preferences():
             st.write(silence_thresh_dbfs)
 
 # Set up UI Elements
+
+st.title('Muesli Practice Helper')
 
 draw_sidebar_with_preferences()
 
