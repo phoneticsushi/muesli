@@ -16,6 +16,16 @@ def plot_waveform(y, sample_rate):
     return fig
 
 
+def plot_split_waveform(y, sample_rate):
+    plt.style.use('dark_background')
+    fig, ax = plt.subplots()
+    y_harm, y_perc = librosa.effects.hpss(y)
+    librosa.display.waveshow(y_harm, sr=sample_rate, alpha=0.5, ax=ax, label='Harmonic')
+    librosa.display.waveshow(y_perc, sr=sample_rate, color='r', alpha=0.5, ax=ax, label='Percussive')
+    ax.legend()
+    return fig
+
+
 def plot_stft(y, sample_rate):
     plt.style.use('dark_background')
     D = librosa.stft(y)  # STFT of y

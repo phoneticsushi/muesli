@@ -16,6 +16,8 @@ class AudioClip:
         librosa_clip = audioplots.audiosegment_to_librosa(audio_segment)
         self.waveform_fig = audioplots.plot_waveform(librosa_clip, self.audio_segment.frame_rate)
         self.stft_fig = audioplots.plot_stft(librosa_clip, self.audio_segment.frame_rate)
+        self.split_waveform_fig = audioplots.plot_split_waveform(librosa_clip, self.audio_segment.frame_rate)
+
         # TODO: remove hardcoded approximate bpm
         self.tempo_estimate = audioplots.estimate_tempo(librosa_clip, self.audio_segment.frame_rate, 70)
 
@@ -44,12 +46,12 @@ class AudioClip:
                 st.markdown(f'{self.audio_segment.dBFS:.3f}')
                 st.caption('Nothing here yet')
                 st.markdown(r'¯\\\_(ツ)\_/¯')
-                st.caption('STFT')
-                st.pyplot(self.stft_fig)
+                st.caption('Split Waveform')
+                st.pyplot(self.split_waveform_fig)
             with col3:
                 st.caption('Max dBFS')
                 st.markdown(f'{self.audio_segment.max_dBFS:.3f}')
                 st.caption('Nothing here yet')
                 st.markdown(r'¯\\\_(ツ)\_/¯')
-                st.caption('Nothing here yet')
-                st.markdown(r'¯\\\_(ツ)\_/¯')
+                st.caption('STFT')
+                st.pyplot(self.stft_fig)
