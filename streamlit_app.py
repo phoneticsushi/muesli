@@ -69,7 +69,7 @@ def add_sound_to_clips(sound: AudioSegment):
         start = time.time()
         current_segments = silence.split_on_silence(sound,
                                                     min_silence_len=2000,  # this dude will be modified by the user
-                                                    silence_thresh=-80,  # FIXME: figure this out
+                                                    silence_thresh=sound.dBFS-16,  # FIXME: does this work?
                                                     keep_silence=100,
                                                     seek_step=1)
         end = time.time()
