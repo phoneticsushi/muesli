@@ -3,7 +3,6 @@ import itertools
 import time
 import random
 from typing import Optional
-import base64  # For autoplay hack
 
 import streamlit as st
 import pandas as pd
@@ -16,6 +15,7 @@ from audio_io import AudioIO
 
 from audioplots import *
 from containers import *
+from layout import *
 
 ctx = {
     # names match pyaudio names
@@ -36,28 +36,6 @@ def get_audio_handle() -> AudioIO:
     if 'aio' not in st.session_state:
         st.session_state['aio'] = AudioIO(ctx)
     return st.session_state['aio']
-
-
-def draw_audio_player(clip: AudioClip, autoplay=False):
-    cols = st.columns([1, 2])
-
-    with cols[0]:
-        st.markdown(f'#### {clip.get_display_name_markdown()}')
-
-    with cols[1]:
-        segment_file = clip.audio_segment.export(format='wav')
-        if autoplay:
-            # MASSIVE hack to work around missing autoplay feature in Streamlit
-            clip_str = "data:audio/wav;base64,%s" % (base64.b64encode(segment_file.read()).decode())
-            clip_html = """
-                            <audio autoplay="autoplay" controls style="width: 100%%" class="stAudio">
-                                <source src="%s" type="audio/wav">
-                                Your browser does not support the audio element.
-                            </audio>
-                        """ % clip_str
-            st.markdown(clip_html, unsafe_allow_html=True)
-        else:
-            st.audio(segment_file.read())
 
 
 def add_sound_to_clips(sound: AudioSegment):
@@ -94,24 +72,6 @@ def add_sound_to_clips(sound: AudioSegment):
 
         if len(current_segments) > 0:
             all_clips.appendleft(AudioClip(audio_segment=current_segments[-1], selected=True))
-
-
-def draw_audio_clip(clip: AudioClip, auto_show=False):
-    draw_audio_player(clip, autoplay=auto_show)
-    clip.draw_clip_deets(expand_deets=auto_show)
-
-
-def draw_all_audio_clips():
-    all_clips = st.session_state['all_clips']
-
-    if all_clips:
-        st.markdown('Latest Clip:')
-        draw_audio_clip(all_clips[0], auto_show=True)
-
-    if len(all_clips) > 1:
-        st.markdown('Other Clips:')
-        for clip in itertools.islice(all_clips, 1, None, 1):
-            draw_audio_clip(clip, auto_show=False)
 
 
 def draw_sidebar_with_preferences():
@@ -175,7 +135,7 @@ if toggled:
             add_sound_to_clips(sound)
             sound_status.markdown('Recording is ready!')
             send_balloons_if_lucky()
-            draw_all_audio_clips()
+            draw_audio_clips(st.session_state['all_clips'])
         else:
             sound_status.markdown('How are you able to see this?')
     else:
@@ -187,4 +147,4 @@ else:
         sound_status.markdown('Recording in progress..')
     else:
         sound_status.markdown('Not recording')
-        draw_all_audio_clips()
+        draw_audio_clips(st.session_state['all_clips'])
