@@ -3,26 +3,56 @@ from pydub import AudioSegment
 from name_generator import get_random_name
 import audioplots
 import streamlit as st
+import time
 
 
 class AudioClip:
-    def __init__(self, audio_segment, selected=False):
-        self.name: str = get_random_name()
+    def __init__(self, audio_segment, selected=False):  # TODO: remove selected when retiring standalone app
+        # Set by Recorder on construction
+        start = time.time()
+        self.name: str = name_generator.get_random_name()
+        end = time.time()
+        print(f'Time to generate random name: {end - start}')
         self.creation_time: datetime = datetime.now()
-        self.selected: bool = selected
-
         self.audio_segment: AudioSegment = audio_segment
 
-        librosa_clip = audioplots.audiosegment_to_librosa(audio_segment)
-        self.waveform_fig = audioplots.plot_waveform(librosa_clip, self.audio_segment.frame_rate)
-        self.stft_fig = audioplots.plot_stft(librosa_clip, self.audio_segment.frame_rate)
-        self.split_waveform_fig = audioplots.plot_split_waveform(librosa_clip, self.audio_segment.frame_rate)
+        # Set by Listener
+        self.selected: bool = selected
 
-        # TODO: remove hardcoded approximate bpm
-        self.tempo_estimate = audioplots.estimate_tempo(librosa_clip, self.audio_segment.frame_rate, 70)
+        # Set by this instance when the listener calls for them
+        self._waveform_fig = None
+        self._stft_fig = None
+        self._split_waveform_fig = None
+        self._tempo_estimate = None
 
     def __hash__(self):
         return self.creation_time.__hash__()
+
+    # Ignoring locks to ensure thread safety because this function is idempotent
+    # Worst case, multiple listener threads compute the same figures
+    def _resolve_clip_statistics(self):
+        librosa_clip = None  # Only compute this if necessary
+
+        if self._waveform_fig is None:
+            if librosa_clip is None:
+                librosa_clip = audioplots.audiosegment_to_librosa(self.audio_segment)
+            self._waveform_fig = audioplots.plot_waveform(librosa_clip, self.audio_segment.frame_rate)
+
+        if self._stft_fig is None:
+            if librosa_clip is None:
+                librosa_clip = audioplots.audiosegment_to_librosa(self.audio_segment)
+            self._stft_fig = audioplots.plot_stft(librosa_clip, self.audio_segment.frame_rate)
+
+        if self._split_waveform_fig is None:
+            if librosa_clip is None:
+                librosa_clip = audioplots.audiosegment_to_librosa(self.audio_segment)
+            self._split_waveform_fig = audioplots.plot_split_waveform(librosa_clip, self.audio_segment.frame_rate)
+
+        if not self._tempo_estimate:
+            if librosa_clip is None:
+                librosa_clip = audioplots.audiosegment_to_librosa(self.audio_segment)
+            # TODO: remove hardcoded approximate bpm
+            self._tempo_estimate = audioplots.estimate_tempo(librosa_clip, self.audio_segment.frame_rate, 70)
 
     def get_display_name_markdown(self) -> str:
         if self.selected:
@@ -31,6 +61,8 @@ class AudioClip:
             return f'**{self.name}**'
 
     def draw_clip_deets(self, expand_deets=False):
+        self._resolve_clip_statistics()
+
         with st.expander(label="Pretty Graphs and Deets", expanded=expand_deets):
             col1, col2, col3 = st.columns(3)
 
@@ -38,20 +70,20 @@ class AudioClip:
                 st.caption('Duration')
                 st.markdown(f'{len(self.audio_segment) / 1000}s')
                 st.caption('Estimated Tempo')
-                st.markdown(f'{self.tempo_estimate:.3f} bpm')
+                st.markdown(f'{self._tempo_estimate:.3f} bpm')
                 st.caption('Waveform')
-                st.pyplot(self.waveform_fig)
+                st.pyplot(self._waveform_fig)
             with col2:
                 st.caption('Average dBFS')
                 st.markdown(f'{self.audio_segment.dBFS:.3f}')
                 st.caption('Nothing here yet')
                 st.markdown(r'¯\\\_(ツ)\_/¯')
                 st.caption('Split Waveform')
-                st.pyplot(self.split_waveform_fig)
+                st.pyplot(self._split_waveform_fig)
             with col3:
                 st.caption('Max dBFS')
                 st.markdown(f'{self.audio_segment.max_dBFS:.3f}')
                 st.caption('Nothing here yet')
                 st.markdown(r'¯\\\_(ツ)\_/¯')
                 st.caption('STFT')
-                st.pyplot(self.stft_fig)
+                st.pyplot(self._stft_fig)
