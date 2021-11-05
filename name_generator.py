@@ -1,17 +1,23 @@
-from random_word import RandomWords
 
-r = RandomWords()
+# FIXME: Stop using this library; it requires an active internet connection and it's super sketch
+# r = RandomWords()
+#
+#
+# def get_random_name():
+#     adjective = r.get_random_word(
+#         hasDictionaryDef="true",
+#         minCorpusCount=5000,
+#         includePartOfSpeech="adjective"
+#     )
+#     noun = r.get_random_word(
+#         hasDictionaryDef="true",
+#         minCorpusCount=5000,
+#         includePartOfSpeech="noun"
+#     )
+#     return f'{adjective}_{noun}'.lower()
+
+import secrets
 
 
 def get_random_name():
-    adjective = r.get_random_word(
-        hasDictionaryDef="true",
-        minCorpusCount=5000,
-        includePartOfSpeech="adjective"
-    )
-    noun = r.get_random_word(
-        hasDictionaryDef="true",
-        minCorpusCount=5000,
-        includePartOfSpeech="noun"
-    )
-    return f'{adjective}_{noun}'.lower()
+    return secrets.token_hex(3)

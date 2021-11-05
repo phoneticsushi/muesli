@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydub import AudioSegment
-from name_generator import get_random_name
+import name_generator
 import audioplots
 import streamlit as st
 import time
