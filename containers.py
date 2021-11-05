@@ -20,9 +20,9 @@ class AudioClip:
         self.selected: bool = selected
 
         # Set by this instance when the listener calls for them
-        self._waveform_fig = None
-        self._stft_fig = None
-        self._split_waveform_fig = None
+        self._waveform_img = None
+        self._stft_img = None
+        self._split_waveform_img = None
         self._tempo_estimate = None
 
     def __hash__(self):
@@ -33,20 +33,20 @@ class AudioClip:
     def _resolve_clip_statistics(self):
         librosa_clip = None  # Only compute this if necessary
 
-        if self._waveform_fig is None:
+        if self._waveform_img is None:
             if librosa_clip is None:
                 librosa_clip = audioplots.audiosegment_to_librosa(self.audio_segment)
-            self._waveform_fig = audioplots.plot_waveform(librosa_clip, self.audio_segment.frame_rate)
+            self._waveform_img = audioplots.plot_waveform(librosa_clip, self.audio_segment.frame_rate)
 
-        if self._stft_fig is None:
+        if self._stft_img is None:
             if librosa_clip is None:
                 librosa_clip = audioplots.audiosegment_to_librosa(self.audio_segment)
-            self._stft_fig = audioplots.plot_stft(librosa_clip, self.audio_segment.frame_rate)
+            self._stft_img = audioplots.plot_stft(librosa_clip, self.audio_segment.frame_rate)
 
-        if self._split_waveform_fig is None:
+        if self._split_waveform_img is None:
             if librosa_clip is None:
                 librosa_clip = audioplots.audiosegment_to_librosa(self.audio_segment)
-            self._split_waveform_fig = audioplots.plot_split_waveform(librosa_clip, self.audio_segment.frame_rate)
+            self._split_waveform_img = audioplots.plot_split_waveform(librosa_clip, self.audio_segment.frame_rate)
 
         if not self._tempo_estimate:
             if librosa_clip is None:
@@ -72,18 +72,18 @@ class AudioClip:
                 st.caption('Estimated Tempo')
                 st.markdown(f'{self._tempo_estimate:.3f} bpm')
                 st.caption('Waveform')
-                st.pyplot(self._waveform_fig)
+                st.image(self._waveform_img)
             with col2:
                 st.caption('Average dBFS')
                 st.markdown(f'{self.audio_segment.dBFS:.3f}')
                 st.caption('Nothing here yet')
                 st.markdown(r'¯\\\_(ツ)\_/¯')
                 st.caption('Split Waveform')
-                st.pyplot(self._split_waveform_fig)
+                st.image(self._split_waveform_img)
             with col3:
                 st.caption('Max dBFS')
                 st.markdown(f'{self.audio_segment.max_dBFS:.3f}')
                 st.caption('Nothing here yet')
                 st.markdown(r'¯\\\_(ツ)\_/¯')
                 st.caption('STFT')
-                st.pyplot(self._stft_fig)
+                st.image(self._stft_img)
