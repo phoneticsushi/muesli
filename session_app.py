@@ -1,29 +1,42 @@
 import streamlit as st
 from recording_session import *
+
 from muesli_listener import *
 from muesli_recorder import *
+import gc
+
 
 @st.experimental_singleton()
 def get_the_only_recording_session():
     return RecordingSession('WUSS POPPIN JIMBO', 42)
 
 
-def run_muesli_role_selection():
-    st.title('Muesli Recording Helper: Role Selection')
-    left_col, right_col = st.columns(2)
+def draw_debug_controls():
+    st.title('DEBUG Controls')
+    if st.button("DEBUG: Clear all Recordings"):
+        get_the_only_recording_session()._recordings.clear()
 
-    if left_col.button('Be a Recorder'):
-        st.session_state['is_recorder'] = True
-        st.experimental_rerun()
-    elif right_col.button('Be a Listener'):
-        st.session_state['is_listener'] = True
-        st.experimental_rerun()
-    else:
-        st.success('Select a role for this session')
-        st.info('Open a new tab to create another session')
+    if st.button('DEBUG: Run Garbage Collection'):
+        gc.collect()
 
 
-# Redirect to Role for this instance
+def draw_session_id_section(recording_session: RecordingSession):
+    st.title("This Recording Session's ID")
+    st.write(recording_session.server_id)
+
+
+def draw_session_connection_section():
+    st.title('Attach to Another Session')
+    # TODO: NYI
+    st.text_input('Enter the recording session ID:', key='session_to_join')
+
+    session_to_join = st.session_state.get('session_to_join', None)
+    if session_to_join:
+        # TODO: support multiple sessions
+        st.error(f"Can't join session '{session_to_join}' - multi-session support isn't implemented yet")
+
+
+# Draw Page
 
 st.set_page_config(
     page_title=None,
@@ -33,12 +46,11 @@ st.set_page_config(
     menu_items=None
 )
 
-is_recorder = st.session_state.get('is_recorder', False)
-is_listener = st.session_state.get('is_listener', False)
+recording_session = get_the_only_recording_session()
 
-if is_recorder:
-    run_muesli_recorder(get_the_only_recording_session())
-elif is_listener:
-    run_muesli_listener(get_the_only_recording_session())
-else:
-    run_muesli_role_selection()
+run_muesli_listener(recording_session)
+with st.sidebar:
+    draw_debug_controls()
+    run_muesli_recorder(recording_session)
+    draw_session_id_section(recording_session)
+    draw_session_connection_section()

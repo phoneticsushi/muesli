@@ -1,13 +1,13 @@
 import streamlit as st
+
 import numpy as np
 
 import pydub
 from matplotlib import pyplot as plt
 
-import logging
 import queue
 
-import gc
+import threading
 import time
 
 from recording_session import RecordingSession
@@ -26,16 +26,9 @@ def run_muesli_recorder(recording_session: RecordingSession):
     RTC_CONFIGURATION = RTCConfiguration(
         {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
     )
-    logger = logging.getLogger(__name__)
+    # end TODO section
 
-    st.title(f'Muesli Practice Helper: Recording for "{recording_session.server_id}"')
-
-    # TODO: remove debugs
-    if st.button("DEBUG: clear cache"):
-        recording_session._recordings.clear()
-
-    if st.button('DEBUG: Collect Garbage'):
-        gc.collect()
+    st.title(f'Enable/Disable Microphone')
 
     webrtc_ctx = webrtc_streamer(
         key="sendonly-audio",
@@ -45,6 +38,26 @@ def run_muesli_recorder(recording_session: RecordingSession):
         media_stream_constraints={"audio": True},
     )
 
+    if webrtc_ctx.audio_receiver:
+        st.error('Microphone is open...')
+        if not st.session_state.get('audio_processing_thread_active', False):
+            # Start a thread to process the audio
+            print('DEBUG: starting audio processing thread')
+            st.session_state['audio_processing_thread_active'] = True
+            processing_thread = threading.Thread(target=run_audio_processing_loop, args=[webrtc_ctx, recording_session], daemon=True)
+            st.report_thread.add_report_ctx(processing_thread)
+            processing_thread.start()
+    else:
+        st.success('Click START to open the microphone')
+
+    st.info('The microphone will remain open until you click STOP.')
+    st.info('You can use the controls on the right to start and stop recording.')
+
+
+def run_audio_processing_loop(webrtc_ctx, recording_session: RecordingSession):
+    # TODO: refactor where sound_bytes lives
+    sound_bytes = bytearray()
+
     silent_frames_required_to_save_clip = 4 * 50  # TODO: remove hardcoded 4 seconds
 
     consecutive_silent_frames = 0
@@ -52,55 +65,49 @@ def run_muesli_recorder(recording_session: RecordingSession):
     total_frames_skipped = 0
     last_frame_was_recording: bool = False
 
-    # TODO: refactor where sound_bytes lives
-    sound_bytes = bytearray()
+    if not webrtc_ctx.audio_receiver:
+        print('DEBUG: audio receiver inactive; exiting processing thread...')
+        st.session_state['audio_processing_thread_active'] = False
+        return
 
-    if webrtc_ctx.audio_receiver:
-        st.error('Microphone is open...')
-    else:
-        st.success('Click START to open the microphone')
-    st.info('The microphone will remain open until you click STOP, but audio will only be saved when the listening session requests it.')
-
-    # Event loop
-    while True:
-        if webrtc_ctx.audio_receiver:
-            try:
-                audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=2)
-            except queue.Empty:
-                logger.warning("Queue is empty. Abort.")
-                break
-
-            for audio_frame in audio_frames:
-                if recording_session.recording_enabled:
-                    total_frames_recorded = total_frames_recorded + 1
-                    np_frame = audio_frame.to_ndarray()
-                    sound_bytes.extend(np_frame.tobytes())
-
-                    if np.amax(np_frame) > 2000:  # TODO: replace magic number
-                        # This frame is silence
-                        consecutive_silent_frames = 0
-                    else:
-                        consecutive_silent_frames = consecutive_silent_frames + 1
-                        if consecutive_silent_frames == silent_frames_required_to_save_clip:
-                            save_audio_buffer_to_recording_session(recording_session, sound_bytes, consecutive_silent_frames, audio_frame)
-                            sound_bytes = bytearray()
-                            consecutive_silent_frames = 0
-
-                    last_frame_was_recording = True
-                else:  # Recording disabled
-                    if last_frame_was_recording:
-                        save_audio_buffer_to_recording_session(recording_session, sound_bytes, consecutive_silent_frames, audio_frame)
-                        sound_bytes = bytearray()  # TODO: move this into above function somehow?
-
-                    total_frames_skipped = total_frames_skipped + 1
-                    consecutive_silent_frames = 0
-                    last_frame_was_recording = False
-
-                if (total_frames_recorded + total_frames_skipped) % 50 == 0:
-                    print(f'DEBUG: REC={recording_session.recording_enabled} | LAST={last_frame_was_recording} | consecutive_silent={consecutive_silent_frames} | silent_required_for_clip={silent_frames_required_to_save_clip} | total_recorded={total_frames_recorded} | total_skipped={total_frames_skipped}')
-        else:
-            logger.warning("Break out of loop, lol")
+    while st.session_state.get('audio_processing_thread_active', False):
+        try:
+            audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=2)
+        except queue.Empty:
+            print("WARNING: Queue is empty. Abort.")
             break
+
+        for audio_frame in audio_frames:
+            if recording_session.recording_enabled:
+                total_frames_recorded = total_frames_recorded + 1
+                np_frame = audio_frame.to_ndarray()
+                sound_bytes.extend(np_frame.tobytes())
+
+                if np.amax(np_frame) > 2000:  # TODO: replace magic number
+                    # This frame is silence
+                    consecutive_silent_frames = 0
+                else:
+                    consecutive_silent_frames = consecutive_silent_frames + 1
+                    if consecutive_silent_frames == silent_frames_required_to_save_clip:
+                        save_audio_buffer_to_recording_session(recording_session, sound_bytes, consecutive_silent_frames, audio_frame)
+                        sound_bytes = bytearray()
+                        consecutive_silent_frames = 0
+
+                last_frame_was_recording = True
+            else:  # Recording disabled
+                if last_frame_was_recording:
+                    save_audio_buffer_to_recording_session(recording_session, sound_bytes, consecutive_silent_frames, audio_frame)
+                    sound_bytes = bytearray()  # TODO: move this into above function somehow?
+
+                total_frames_skipped = total_frames_skipped + 1
+                consecutive_silent_frames = 0
+                last_frame_was_recording = False
+
+            if (total_frames_recorded + total_frames_skipped) % 50 == 0:
+                print(f'DEBUG: REC={recording_session.recording_enabled} | LAST={last_frame_was_recording} | consecutive_silent={consecutive_silent_frames} | silent_required_for_clip={silent_frames_required_to_save_clip} | total_recorded={total_frames_recorded} | total_skipped={total_frames_skipped}')
+
+    print('DEBUG: Loop terminated - exiting audio processing thread')
+    st.session_state['audio_processing_thread_active'] = False
 
 
 # audio_frame is for metadata only - TODO: refactor this
@@ -123,14 +130,6 @@ def save_audio_buffer_to_recording_session(recording_session: RecordingSession, 
         recording_session.append_segment_as_clip(audio_segment)
         end = time.time()
         print(f'DEBUG: Appended AudioSegment to session | buffer_len={len(sound_buffer)} | recording len={len(audio_segment)} | wall_time={end-start}')
-
-        # TODO: remove this code
-        segment_file = audio_segment.export(format='wav')
-        plt.plot(audio_segment.get_array_of_samples())
-        st.pyplot(plt.gcf())
-        plt.clf()
-        st.audio(segment_file.read())
-        # END TODO
     else:
         print('WARNING: Sound buffer has no length!')
 

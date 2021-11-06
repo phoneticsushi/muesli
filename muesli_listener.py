@@ -5,8 +5,10 @@ import layout
 
 import streamlit as st
 
+# TODO: rename to "draw_muesli_viewer"
 def run_muesli_listener(recording_session: RecordingSession):
-    st.title(f'Muesli Practice Helper: Listening to "{recording_session.server_id}"')
+    st.title(f'Muesli Practice Helper')
+    st.write(f'Session "{recording_session.server_id}"')
 
     recording_session.recording_enabled = st.number_input("Enable recording?")
 
