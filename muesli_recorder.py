@@ -45,54 +45,95 @@ def run_muesli_recorder(recording_session: RecordingSession):
         media_stream_constraints={"audio": True},
     )
 
-    consecutive_silent_frames = 0
-    total_frames = 0
+    silent_frames_required_to_save_clip = 4 * 50  # TODO: remove hardcoded 4 seconds
 
+    consecutive_silent_frames = 0
+    total_frames_recorded = 0
+    total_frames_skipped = 0
+    last_frame_was_recording: bool = False
+
+    # TODO: refactor where sound_bytes lives
     sound_bytes = bytearray()
+
+    if webrtc_ctx.audio_receiver:
+        st.error('Microphone is open...')
+    else:
+        st.success('Click START to open the microphone')
+    st.info('The microphone will remain open until you click STOP, but audio will only be saved when the listening session requests it.')
+
+    # Event loop
     while True:
         if webrtc_ctx.audio_receiver:
             try:
-                audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
+                audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=2)
             except queue.Empty:
                 logger.warning("Queue is empty. Abort.")
                 break
 
             for audio_frame in audio_frames:
-                total_frames = total_frames + 1
-                np_frame = audio_frame.to_ndarray()
-                sound_bytes.extend(np_frame.tobytes())
+                if recording_session.recording_enabled:
+                    total_frames_recorded = total_frames_recorded + 1
+                    np_frame = audio_frame.to_ndarray()
+                    sound_bytes.extend(np_frame.tobytes())
 
-                if np.amax(np_frame) < 2000:  #TODO: replace magic number
-                    consecutive_silent_frames = consecutive_silent_frames + 1
-                    # TODO: remove hardcoded timer -
-                    #   assuming 960 is frame size here to give a 4 second window
-                    if consecutive_silent_frames == 4.0 * 50:
-                        audio_segment = pydub.AudioSegment(
-                            data=bytes(sound_bytes),
-                            sample_width=audio_frame.format.bytes,
-                            frame_rate=audio_frame.sample_rate,
-                            channels=len(audio_frame.layout.channels),
-                        )
-                        print(f'Silence GET: len = {len(sound_bytes)}; recording len = {len(audio_segment)}')
-                        start = time.time()
-                        recording_session.append_segment_as_clip(audio_segment)
-                        end = time.time()
-                        print(f'Time to create audio clip: {end - start}')
+                    if np.amax(np_frame) > 2000:  # TODO: replace magic number
+                        # This frame is silence
+                        consecutive_silent_frames = 0
+                    else:
+                        consecutive_silent_frames = consecutive_silent_frames + 1
+                        if consecutive_silent_frames == silent_frames_required_to_save_clip:
+                            save_audio_buffer_to_recording_session(recording_session, sound_bytes, consecutive_silent_frames, audio_frame)
+                            sound_bytes = bytearray()
+                            consecutive_silent_frames = 0
 
-                        # TODO: remove this code
-                        segment_file = audio_segment.export(format='wav')
-                        plt.plot(audio_segment.get_array_of_samples())
-                        st.pyplot(plt.gcf())
-                        plt.clf()
-                        st.audio(segment_file.read())
-                        # END TODO
+                    last_frame_was_recording = True
+                else:  # Recording disabled
+                    if last_frame_was_recording:
+                        save_audio_buffer_to_recording_session(recording_session, sound_bytes, consecutive_silent_frames, audio_frame)
+                        sound_bytes = bytearray()  # TODO: move this into above function somehow?
 
-                        sound_bytes = bytearray()
-                else:
+                    total_frames_skipped = total_frames_skipped + 1
                     consecutive_silent_frames = 0
+                    last_frame_was_recording = False
 
-                if total_frames % 50 == 0:
-                    print(f'{consecutive_silent_frames} / {4.0 * 50} / {total_frames} | plots={len(plt.get_fignums())}')
+                if (total_frames_recorded + total_frames_skipped) % 50 == 0:
+                    print(f'DEBUG: REC={recording_session.recording_enabled} | LAST={last_frame_was_recording} | consecutive_silent={consecutive_silent_frames} | silent_required_for_clip={silent_frames_required_to_save_clip} | total_recorded={total_frames_recorded} | total_skipped={total_frames_skipped}')
+        else:
+            logger.warning("Break out of loop, lol")
+            break
+
+
+# audio_frame is for metadata only - TODO: refactor this
+def save_audio_buffer_to_recording_session(recording_session: RecordingSession, sound_buffer, frames_to_trim_from_end, audio_frame) -> None:
+    # TODO: fix trimming!
+    #print(f'frames={frames_to_trim_from_end} | sample_rate={audio_frame.sample_rate} | buffer_len={len(sound_buffer)}')
+    #samples_to_trim_from_end = frames_to_trim_from_end * audio_frame.sample_rate
+    #trimmed_sound_buffer = bytes(sound_buffer[:len(sound_buffer) - samples_to_trim_from_end])
+    #print(f'trimmed_len={len(trimmed_sound_buffer)}')
+    trimmed_sound_buffer = bytes(sound_buffer)  #trimming disabled until I do math properly
+
+    if trimmed_sound_buffer:
+        start = time.time()
+        audio_segment = pydub.AudioSegment(
+            data=trimmed_sound_buffer,
+            sample_width=audio_frame.format.bytes,
+            frame_rate=audio_frame.sample_rate,
+            channels=len(audio_frame.layout.channels),
+        )
+        recording_session.append_segment_as_clip(audio_segment)
+        end = time.time()
+        print(f'DEBUG: Appended AudioSegment to session | buffer_len={len(sound_buffer)} | recording len={len(audio_segment)} | wall_time={end-start}')
+
+        # TODO: remove this code
+        segment_file = audio_segment.export(format='wav')
+        plt.plot(audio_segment.get_array_of_samples())
+        st.pyplot(plt.gcf())
+        plt.clf()
+        st.audio(segment_file.read())
+        # END TODO
+    else:
+        print('WARNING: Sound buffer has no length!')
+
 
             # if len(audio_segment) > 0:
             #     if sound_window_buffer is None:
@@ -130,6 +171,3 @@ def run_muesli_recorder(recording_session: RecordingSession):
             #     ax_freq.set_ylabel("Magnitude")
             #
             #     fig_place.pyplot(fig)
-        else:
-            logger.warning("Break out of loop, lol")
-            break

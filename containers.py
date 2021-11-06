@@ -5,14 +5,13 @@ import audioplots
 import streamlit as st
 import time
 
-
+# TODO: add a lock for member functions to gate access to this AudioClip?
 class AudioClip:
     def __init__(self, audio_segment, selected=False):  # TODO: remove selected when retiring standalone app
         # Set by Recorder on construction
         start = time.time()
         self.name: str = name_generator.get_random_name()
         end = time.time()
-        print(f'Time to generate random name: {end - start}')
         self.creation_time: datetime = datetime.now()
         self.audio_segment: AudioSegment = audio_segment
 
@@ -24,6 +23,7 @@ class AudioClip:
         self._stft_img = None
         self._split_waveform_img = None
         self._tempo_estimate = None
+        print(f'Generated AudioClip {self.name} - time to generate random name: {end - start}')
 
     def __hash__(self):
         return self.creation_time.__hash__()

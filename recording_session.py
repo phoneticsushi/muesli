@@ -7,6 +7,9 @@ from containers import *
 class RecordingSession:
     def __init__(self, server_id, max_recordings):
         self.server_id = server_id
+        # Set by the listener.  The recorder will toss out all audio when this is False
+        self.recording_enabled: bool = False
+
         self._recordings: collections.deque[AudioClip] = collections.deque(maxlen=max_recordings)
 
     # Deques are thread-safe for single-append and read operations,
