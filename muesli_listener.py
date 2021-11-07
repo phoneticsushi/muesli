@@ -5,6 +5,11 @@ import layout
 
 import streamlit as st
 
+
+def uptake_checkbox_state_on_next_run():
+    st.session_state['should_uptake_checkbox_state'] = True
+
+
 # TODO: rename to "draw_muesli_viewer"
 def run_muesli_listener(recording_session: RecordingSession):
     st.title(f'Muesli Practice Helper')
@@ -13,18 +18,14 @@ def run_muesli_listener(recording_session: RecordingSession):
     cols = st.columns(3)
     with cols[0]:
         st.caption('Session ID')
-        st.write(f'"{recording_session.server_id}"')
+        st.write(f'"{recording_session.get_server_id()}"')
     with cols[2]:
         st.caption('Refresh')
         st.button('Refresh')
 
-    # TODO: Enable Recording checkbox is session-local - refactor this so it's stored in Recording Session
-    if recording_session.get_approximate_number_of_open_microphones():
-        recording_session.recording_enabled = st.checkbox("Enable Recording")
-    else:
-        st.warning('No microphones are open - select START in the sidebar on the recording device')
+    draw_and_apply_recording_enable_checkbox(recording_session)
 
-    if recording_session.recording_enabled:
+    if recording_session.is_recording_enabled():
         st.info("Recording in progress...")
     elif num_clips == 0:
         draw_session_connection_section()
@@ -50,3 +51,29 @@ def draw_session_connection_section():
     if session_to_join:
         # TODO: support multiple sessions
         st.error(f"Can't join session '{session_to_join}' - multi-session support isn't implemented yet")
+
+
+# TODO: probably not the best place for this
+# This code isn't terribly threadsafe, but since the app can be modified at any time,
+# The only way to know the current state is to refresh
+def draw_and_apply_recording_enable_checkbox(recording_session: RecordingSession):
+    uptake_checkbox = st.session_state.get('should_uptake_checkbox_state', None)
+    st.session_state['should_uptake_checkbox_state'] = False
+
+    if recording_session.can_enable_recording():
+        # Only pay attention to checkbox if it's possible to record - set to False otherwise
+        if uptake_checkbox:
+            recording_session.update_user_enabled_recording_flag(
+                st.session_state.get('st.checkbox_enable_recording', None)
+            )
+
+        st.checkbox(
+            label="Enable Recording",
+            key='st.checkbox_enable_recording',
+            value=recording_session.is_recording_enabled(),
+            on_change=uptake_checkbox_state_on_next_run
+        )
+    else:
+        # Remove option to disable recording
+        st.warning('No microphones are open - select START in the sidebar on the recording device')
+        recording_session.update_user_enabled_recording_flag(False)

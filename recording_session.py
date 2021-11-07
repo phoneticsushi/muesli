@@ -8,14 +8,29 @@ import streamlit as st
 # All functions of this class must be threadsafe
 class RecordingSession:
     def __init__(self, server_id, max_recordings):
-        self.server_id = server_id
-        # Set by the listener.  The recorder will toss out all audio when this is False
-        self.recording_enabled: bool = False
+        self._server_id = server_id
 
         self._recordings: collections.deque[AudioClip] = collections.deque(maxlen=max_recordings)
 
-        self._number_of_open_microphones: int = 0
-        self._number_of_open_microphones_lock = threading.Lock()
+        # The recorder will toss out all audio when these are Falsey
+
+        self._user_enabled_recording: bool = False  # TODO: check this value for thread safety?
+        self._open_microphones: int = 0
+        self._lock_open_microphones = threading.Lock()
+
+    def get_server_id(self):
+        return self._server_id
+
+    # TODO: will we regret foregoing thread safety?
+    # This is accessed in the audio processing loop
+    def is_recording_enabled(self):
+        return bool(self._user_enabled_recording and self._open_microphones)  # NoneType -> False
+
+    def can_enable_recording(self):
+        return self._open_microphones > 0
+
+    def update_user_enabled_recording_flag(self, update):
+        self._user_enabled_recording = update
 
     # Deques are thread-safe for single-append and read operations,
     # so no locking is needed here
@@ -32,12 +47,12 @@ class RecordingSession:
         return len(self._recordings)
 
     def report_microphone_open(self):
-        with self._number_of_open_microphones_lock:
-            self._number_of_open_microphones += 1
+        with self._lock_open_microphones:
+            self._open_microphones += 1
 
     def report_microphone_closed(self):
-        with self._number_of_open_microphones_lock:
-            self._number_of_open_microphones -= 1
-
-    def get_approximate_number_of_open_microphones(self):
-        return self._number_of_open_microphones
+        with self._lock_open_microphones:
+            self._open_microphones -= 1
+            # TODO: move this elsewhere?
+            if self._open_microphones == 0:
+                self._user_enabled_recording = False
