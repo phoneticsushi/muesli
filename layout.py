@@ -35,12 +35,10 @@ def draw_audio_clip(clip: AudioClip, auto_show=False):
 
 def draw_audio_clips(audio_clips: List[AudioClip]):
     if audio_clips:
-        st.markdown('Latest Clip:')
+        st.header('Latest Clip:')
         draw_audio_clip(audio_clips[0], auto_show=True)
 
     if len(audio_clips) > 1:
-        st.markdown('Other Clips:')
+        st.header('Other Clips:')
         for clip in itertools.islice(audio_clips, 1, None, 1):
             draw_audio_clip(clip, auto_show=False)
-
-

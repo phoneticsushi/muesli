@@ -19,22 +19,13 @@ def draw_debug_controls():
     if st.button('DEBUG: Run Garbage Collection'):
         gc.collect()
 
+    # Draw Memes
+    st.video('https://www.youtube.com/watch?v=HaF-nRS_CWM')
+
 
 def draw_session_id_section(recording_session: RecordingSession):
     st.title("This Recording Session's ID")
     st.write(recording_session.server_id)
-
-
-def draw_session_connection_section():
-    st.title('Attach to Another Session')
-    # TODO: NYI
-    st.text_input('Enter the recording session ID:', key='session_to_join')
-
-    session_to_join = st.session_state.get('session_to_join', None)
-    if session_to_join:
-        # TODO: support multiple sessions
-        st.error(f"Can't join session '{session_to_join}' - multi-session support isn't implemented yet")
-
 
 # Draw Page
 
@@ -47,10 +38,9 @@ st.set_page_config(
 )
 
 recording_session = get_the_only_recording_session()
-
 run_muesli_listener(recording_session)
+
 with st.sidebar:
     draw_debug_controls()
-    run_muesli_recorder(recording_session)
     draw_session_id_section(recording_session)
-    draw_session_connection_section()
+    run_muesli_recorder(recording_session)

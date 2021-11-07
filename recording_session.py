@@ -23,3 +23,5 @@ class RecordingSession:
     def get_clips_oldest_to_newest(self):
         return list(self._recordings)
 
+    def get_number_of_clips(self):
+        return len(self._recordings)
