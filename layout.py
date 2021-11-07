@@ -29,7 +29,8 @@ def draw_audio_player(clip: AudioClip, autoplay=False):
 
 def draw_audio_clip(clip: AudioClip, auto_show=False):
     draw_audio_player(clip, autoplay=auto_show)
-    clip.draw_clip_deets(expand_deets=auto_show)
+    clip.draw_pretty_graphs(expand=auto_show)
+    clip.draw_clip_deets(expand=False)
 
 
 def draw_audio_clips(audio_clips: List[AudioClip]):

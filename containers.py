@@ -60,10 +60,26 @@ class AudioClip:
         else:
             return f'**{self.name}**'
 
-    def draw_clip_deets(self, expand_deets=False):
+    def draw_pretty_graphs(self, expand=False):
         self._resolve_clip_statistics()
 
-        with st.expander(label="Pretty Graphs and Deets", expanded=expand_deets):
+        with st.expander(label="Pretty Graphs", expanded=expand):
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.caption('Waveform')
+                st.image(self._waveform_img)
+            with col2:
+                st.caption('Split Waveform')
+                st.image(self._split_waveform_img)
+            with col3:
+                st.caption('STFT')
+                st.image(self._stft_img)
+
+    def draw_clip_deets(self, expand=False):
+        self._resolve_clip_statistics()
+
+        with st.expander(label="Deets for Nerds", expanded=expand):
             col1, col2, col3 = st.columns(3)
 
             with col1:
@@ -71,19 +87,13 @@ class AudioClip:
                 st.markdown(f'{len(self.audio_segment) / 1000}s')
                 st.caption('Estimated Tempo')
                 st.markdown(f'{self._tempo_estimate:.3f} bpm')
-                st.caption('Waveform')
-                st.image(self._waveform_img)
             with col2:
                 st.caption('Average dBFS')
                 st.markdown(f'{self.audio_segment.dBFS:.3f}')
                 st.caption('Nothing here yet')
                 st.markdown(r'¯\\\_(ツ)\_/¯')
-                st.caption('Split Waveform')
-                st.image(self._split_waveform_img)
             with col3:
                 st.caption('Max dBFS')
                 st.markdown(f'{self.audio_segment.max_dBFS:.3f}')
                 st.caption('Nothing here yet')
                 st.markdown(r'¯\\\_(ツ)\_/¯')
-                st.caption('STFT')
-                st.image(self._stft_img)
