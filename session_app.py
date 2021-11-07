@@ -11,15 +11,18 @@ def get_the_only_recording_session():
     return RecordingSession('WUSS POPPIN JIMBO', 42)
 
 
-def draw_debug_controls():
-    st.title('DEBUG Controls')
-    if st.button("DEBUG: Clear all Recordings"):
-        get_the_only_recording_session()._recordings.clear()
+def draw_debug_controls(recording_session: RecordingSession):
+    st.title('DEBUG Interface')
+    st.caption(f'Open mics in current session')
+    st.markdown(recording_session.get_approximate_number_of_open_microphones())
 
-    if st.button('DEBUG: Run Garbage Collection'):
+    st.caption(f'Debug Actions')
+    if st.button("Clear Recordings in Current Session"):
+        recording_session._recordings.clear()
+    if st.button('Run Garbage Collection'):
         gc.collect()
 
-    # Draw Memes
+    st.caption('Memes')
     st.video('https://www.youtube.com/watch?v=HaF-nRS_CWM')
 
 
@@ -41,6 +44,6 @@ recording_session = get_the_only_recording_session()
 run_muesli_listener(recording_session)
 
 with st.sidebar:
-    draw_debug_controls()
+    draw_debug_controls(recording_session)
     draw_session_id_section(recording_session)
     run_muesli_recorder(recording_session)

@@ -18,7 +18,12 @@ def run_muesli_listener(recording_session: RecordingSession):
         st.caption('Refresh')
         st.button('Refresh')
 
-    recording_session.recording_enabled = st.checkbox("Enable Recording")
+    # TODO: Enable Recording checkbox is session-local - refactor this so it's stored in Recording Session
+    if recording_session.get_approximate_number_of_open_microphones():
+        recording_session.recording_enabled = st.checkbox("Enable Recording")
+    else:
+        st.warning('No microphones are open - select START in the sidebar on the recording device')
+
     if recording_session.recording_enabled:
         st.info("Recording in progress...")
     elif num_clips == 0:

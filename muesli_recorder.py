@@ -48,10 +48,10 @@ def run_muesli_recorder(recording_session: RecordingSession):
             st.report_thread.add_report_ctx(processing_thread)
             processing_thread.start()
     else:
-        st.info('Click START to open the microphone.')
-
+        st.info('Click START to open the microphone on this device.')
     st.write('The microphone will remain open until you click STOP.')
-    st.info('You can use the "Enable Recording" checkbox on the right to start and stop recording.')
+
+    st.write('You can use the "Enable Recording" checkbox on the right to start and stop recording.')
     st.title('Remote Control')
     st.write(f"To use this device's microphone but control recording from another device:")
     st.markdown('1. Press START on this device\n'
@@ -76,6 +76,7 @@ def run_audio_processing_loop(webrtc_ctx, recording_session: RecordingSession):
         st.session_state['audio_processing_thread_active'] = False
         return
 
+    recording_session.report_microphone_open()
     while st.session_state.get('audio_processing_thread_active', False):
         try:
             audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=2)
@@ -114,6 +115,9 @@ def run_audio_processing_loop(webrtc_ctx, recording_session: RecordingSession):
 
     print('DEBUG: Loop terminated - exiting audio processing thread')
     st.session_state['audio_processing_thread_active'] = False
+    # TODO: due to when this thread exits, this isn't updated in a timely manner
+    #   The instance whose microphone was closed tends to miss the update
+    recording_session.report_microphone_closed()
 
 
 # audio_frame is for metadata only - TODO: refactor this
