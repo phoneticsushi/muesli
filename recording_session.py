@@ -7,8 +7,8 @@ import streamlit as st
 
 # All functions of this class must be threadsafe
 class RecordingSession:
-    def __init__(self, server_id, max_recordings):
-        self._server_id = server_id
+    def __init__(self, session_id, max_recordings):
+        self._session_id = session_id
 
         self._recordings: collections.deque[AudioClip] = collections.deque(maxlen=max_recordings)
 
@@ -18,8 +18,8 @@ class RecordingSession:
         self._open_microphones: int = 0
         self._lock_open_microphones = threading.Lock()
 
-    def get_server_id(self):
-        return self._server_id
+    def get_session_id(self):
+        return self._session_id
 
     # TODO: will we regret foregoing thread safety?
     # This is accessed in the audio processing loop

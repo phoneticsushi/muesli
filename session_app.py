@@ -3,11 +3,12 @@ from recording_session import *
 
 from muesli_listener import *
 from muesli_recorder import *
-
+from persistent_state_singleton import PersistentStateSingleton
+from name_generator import get_random_name
 
 @st.experimental_singleton()
-def get_the_only_recording_session():
-    return RecordingSession('WUSS POPPIN JIMBO', 42)
+def get_persistent_state():
+    return PersistentStateSingleton()
 
 
 def draw_debug_controls(recording_session: RecordingSession):
@@ -32,7 +33,7 @@ def draw_debug_controls(recording_session: RecordingSession):
 
 def draw_session_id_section(recording_session: RecordingSession):
     st.title("This Recording Session's ID")
-    st.write(recording_session.get_server_id())
+    st.write(recording_session.get_session_id())
 
 # Draw Page
 
@@ -44,9 +45,31 @@ st.set_page_config(
     menu_items=None
 )
 
-recording_session = get_the_only_recording_session()
-run_muesli_listener(recording_session)
+recording_session = None
+session_to_join = st.session_state.get('session_to_join', None)
 
+if session_to_join:
+    recording_session = get_persistent_state().get_extant_session(session_to_join)
+    if recording_session:
+        st.session_state['selected_session'] = session_to_join
+    print(f'DEBUG: session to join {session_to_join}')
+
+# Try connecting to the session we were previously connected to
+if not recording_session:
+    selected_session_id = st.session_state.get('selected_session', None)
+    print(f'DEBUG: try previous {selected_session_id}')
+    if selected_session_id:
+        recording_session = get_persistent_state().get_extant_session(selected_session_id)
+
+# If that fails, create one
+if not recording_session:
+    new_session_id = get_random_name()
+    st.session_state['selected_session'] = new_session_id
+    recording_session = get_persistent_state().get_or_create_session(new_session_id)
+    print(f'Created new session: "{new_session_id}"')
+
+# Draw UI
+run_muesli_listener(recording_session)
 with st.sidebar:
     draw_debug_controls(recording_session)
     draw_session_id_section(recording_session)

@@ -56,7 +56,7 @@ def run_muesli_recorder(recording_session: RecordingSession):
     st.write(f"To use this device's microphone but control recording from another device:")
     st.markdown('1. Press START on this device\n'
                 '2. Navigate to this page from another device\n'
-                f'3. Enter the session ID "{recording_session.get_server_id()}" on the other device\n'
+                f'3. Enter the session ID "{recording_session.get_session_id()}" on the other device\n'
                 '4. Use the "Enable Recording" checkbox on the other device')
 
 

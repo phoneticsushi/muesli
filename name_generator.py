@@ -20,4 +20,4 @@ import secrets
 
 
 def get_random_name():
-    return secrets.token_hex(3)
+    return secrets.token_hex(3).upper()

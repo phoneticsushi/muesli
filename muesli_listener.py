@@ -18,7 +18,7 @@ def run_muesli_listener(recording_session: RecordingSession):
     cols = st.columns(3)
     with cols[0]:
         st.caption('Session ID')
-        st.write(f'"{recording_session.get_server_id()}"')
+        st.write(f'"{recording_session.get_session_id()}"')
     with cols[2]:
         st.caption('Refresh')
         st.button('Refresh')
@@ -26,9 +26,9 @@ def run_muesli_listener(recording_session: RecordingSession):
     draw_and_apply_recording_enable_checkbox(recording_session)
 
     if recording_session.is_recording_enabled():
-        st.info("Recording in progress...")
+        st.error("Recording in progress...")
     elif num_clips == 0:
-        draw_session_connection_section()
+        draw_session_connection_section(recording_session)
     else:
         time.sleep(0.5)
         # TODO: replace this with proper signalling
@@ -43,14 +43,17 @@ def run_muesli_listener(recording_session: RecordingSession):
         st.markdown(num_clips)
 
 
-def draw_session_connection_section():
+def draw_session_connection_section(recording_session: RecordingSession):
     st.header('Attach to Another Session')
     st.text_input('Enter the recording session ID:', key='session_to_join')
 
     session_to_join = st.session_state.get('session_to_join', None)
+    # Print nothing if no session is specified
     if session_to_join:
-        # TODO: support multiple sessions
-        st.error(f"Can't join session '{session_to_join}' - multi-session support isn't implemented yet")
+        if recording_session.get_session_id() == session_to_join:
+            st.success(f'Joined session "{recording_session.get_session_id()}"')
+        else:
+            st.error(f'No session exists with ID "{session_to_join}"')
 
 
 # TODO: probably not the best place for this
