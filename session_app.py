@@ -17,6 +17,10 @@ def draw_debug_controls(recording_session: RecordingSession):
     st.caption(f'Open mics in current session')
     st.markdown(recording_session._open_microphones)
 
+    st.caption(f'Number of clips in current session')
+    st.markdown(recording_session.get_number_of_clips())
+
+# TODO:: no longer a thing
     st.caption(f'Used Enabled Recording (local)')
     st.write(st.session_state.get('st_checkbox_enable_recording', None))
 
@@ -71,6 +75,6 @@ if not recording_session:
 # Draw UI
 run_muesli_listener(recording_session)
 with st.sidebar:
-    draw_debug_controls(recording_session)
     draw_session_id_section(recording_session)
     run_muesli_recorder(recording_session)
+    draw_debug_controls(recording_session)
