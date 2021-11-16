@@ -23,17 +23,9 @@ def get_persistent_state():
 class PersistentStateSingleton:
     def __init__(self):
         self._lock = threading.Lock()
+        # TODO: Implment a way to detect session disconnection to prevent leaking memory here
         self._recording_sessions: Dict[str, RecordingSession] = {}
-
         self._session_tokens: Dict[str, AccessToken] = {}
-
-    # def session_exists(self, session_id) -> bool:
-    #     with self._lock:
-    #         return session_id in self._recording_sessions.keys()
-    #
-    # def get_extant_session(self, session_id):
-    #     with self._lock:
-    #         return self._recording_sessions.get(session_id, None)
 
     def create_session(self) -> RecordingSession:
         with self._lock:
