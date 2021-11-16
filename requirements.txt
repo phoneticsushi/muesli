@@ -1,6 +1,6 @@
 PyAudio~=0.2.11
 pydub~=0.25.1
-streamlit~=1.1.0
+streamlit~=1.2.0
 numpy~=1.20.3
 librosa~=0.8.1
 matplotlib~=3.4.3
