@@ -4,6 +4,7 @@ from recording_session import RecordingSession, RecordingSessionRole
 import threading
 import name_generator
 from dataclasses import dataclass
+import streamlit as st
 
 
 @dataclass
@@ -12,6 +13,11 @@ class AccessToken:
     creation_time: datetime.datetime
     session: RecordingSession
     role: RecordingSessionRole
+
+
+@st.experimental_singleton()
+def get_persistent_state():
+    return PersistentStateSingleton()
 
 
 class PersistentStateSingleton:
@@ -43,7 +49,9 @@ class PersistentStateSingleton:
             new_token_id = name_generator.get_random_token()
             while new_token_id in self._session_tokens.keys():
                 new_token_id = name_generator.get_random_token()
-            self._session_tokens[new_token_id] = AccessToken(
+            coerced_token_id = new_token_id.upper()
+            print(f'DEBUG: creating token {new_token_id} -> session {recording_session.get_session_id()}')
+            self._session_tokens[coerced_token_id] = AccessToken(
                 token_id=new_token_id,
                 creation_time=datetime.datetime.now(),
                 session=recording_session,
@@ -52,10 +60,18 @@ class PersistentStateSingleton:
         return new_token_id
 
     def get_session_and_burn_token(self, token_id: str) -> Optional[AccessToken]:
+        coerced_token_id = token_id.upper()
         with self._lock:
-            access_token = self._session_tokens.pop(token_id, None)
+            print(f'DEBUG: trying token {token_id} in {self._session_tokens.keys()}')
+            access_token = self._session_tokens.pop(coerced_token_id, None)
         # Tokens older than 5 minutes will be invalid
-        if access_token is not None and datetime.datetime.now() - access_token.creation_time > datetime.timedelta(minutes=5):
-            return access_token
+        if access_token is not None:
+            token_age = datetime.datetime.now() - access_token.creation_time
+            print(f'DEBUG: Token {token_id} found!  age={token_age}')
+            if token_age < datetime.timedelta(minutes=5):
+                return access_token
+            else:
+                return None
         else:
+            print(f'DEBUG: Token {token_id} NOT found')
             return None

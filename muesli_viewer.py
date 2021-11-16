@@ -11,10 +11,11 @@ def draw_muesli_viewer(recording_session: RecordingSession, role: RecordingSessi
         st.title(f'Muesli Practice Helper')
         draw_and_apply_recording_enable_checkbox(recording_session, True)
     elif role is RecordingSessionRole.REMOTE:
-        st.title(f'Muesli (View Only)')
+        st.title(f'Muesli (Remote Control)')
         draw_and_apply_recording_enable_checkbox(recording_session, False)
     elif role is RecordingSessionRole.VIEWER:
-        st.title(f'Muesli (Remote Control)')
+        st.title(f'Muesli (View Only)')
+        st.button('Refresh')  # TODO: move this to a column right of "Start Recording"
         # Intentionally don't draw recording controls
 
     if recording_session.is_recording_enabled():
@@ -64,4 +65,5 @@ def draw_recording_button(recording_session: RecordingSession):
     else:
         # Remove option to disable recording
         st.warning('No microphones are open - select START in the sidebar on the recording device')
+        st.button('Refresh')  # TODO: move this to a column right of "Start Recording"
         recording_session.update_user_enabled_recording_flag(False)

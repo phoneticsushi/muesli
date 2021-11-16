@@ -4,25 +4,19 @@ import streamlit as st
 
 from muesli_landingpage import draw_muesli_landingpage
 from recording_session import *
-import qrcode
 
 from muesli_viewer import *
 from muesli_recorder import *
+from muesli_qr_page import *
 from persistent_state_singleton import PersistentStateSingleton
 from name_generator import get_random_name
-
-@st.experimental_singleton()
-def get_persistent_state():
-    return PersistentStateSingleton()
-
-
-def draw_qr_code(url: str):
-    img = qrcode.make(url)
-    st.image(img.get_image())
 
 
 def draw_debug_controls(recording_session: RecordingSession, role: RecordingSessionRole):
     st.title('DEBUG Interface')
+
+    st.title("This Recording Session's ID")
+    st.write(recording_session.get_session_id())
 
     st.caption("This Client's Role")
     st.write(role)
@@ -48,17 +42,15 @@ def draw_debug_controls(recording_session: RecordingSession, role: RecordingSess
     st.video('https://www.youtube.com/watch?v=HaF-nRS_CWM')
 
 
-def draw_session_id_section(recording_session: RecordingSession):
-    st.title("This Recording Session's ID")
-    st.write(recording_session.get_session_id())
-
-
-# TODO: this
-def display_remote_code(recording_session):
-    url = f'http://192.168.1.66:8501?token={st.session_state["selected_session"]}'
-    draw_qr_code(url)
-    if st.button('Return to previous screen, lol'):
-        st.session_state['st_button_add_remote'] = False
+def draw_remote_control_help():
+    st.title('Remote Control')
+    # TODO: just move the buttons to this section?
+    # TODO: None of this is correct anymore
+    st.write(f"To use this device's microphone but control recording from another device:")
+    st.markdown('1. Press START on this device\n'
+                '2. Navigate to this page from another device\n'
+                f'3. Enter the session ID "{recording_session.get_session_id()}" on the other device\n'
+                '4. Use the "Enable Recording" checkbox on the other device')
 
 
 def try_setting_session_from_token_id(access_token_id: str):
@@ -98,6 +90,8 @@ if 'recording_session' not in st.session_state.keys() and 'recording_session_rol
     if token_params:
         # Comes in as list - use the first param specified
         try_setting_session_from_token_id(token_params[0])
+    # TODO: fix bug whereby expired / incorrect tokens
+    #   won't generate a warning to the user
 
 
 recording_session = st.session_state.get('recording_session', None)
@@ -106,44 +100,15 @@ recording_role = st.session_state.get('recording_session_role', None)
 # If still no session, display the landing page
 if recording_session is None or recording_role is None:
     draw_muesli_landingpage()
+# Check to see if the "add remote / add viewer" buttons were pressed
+elif st.session_state.get('st_button_add_remote', None):
+    draw_muesli_qr_page(recording_session, RecordingSessionRole.REMOTE)
+elif st.session_state.get('st_button_add_viewer', None):
+    draw_muesli_qr_page(recording_session, RecordingSessionRole.VIEWER)
+# If not in some unusual mode, draw the main UI
 else:
     print(f'DEBUG: {random.randint(0,100)} about to draw UI for role={recording_role}')
     draw_muesli_viewer(recording_session, recording_role)
     with st.sidebar:
-        draw_session_id_section(recording_session)
         run_muesli_recorder(recording_session, recording_role)
         draw_debug_controls(recording_session, recording_role)
-
-# TODO: handle displaying UI for attaching remotes/listeners
-# recording_session = None
-# session_to_join = st.session_state.get('session_to_join', None)
-#
-# if session_to_join:
-#     recording_session = get_persistent_state().get_extant_session(session_to_join)
-#     if recording_session:
-#         st.session_state['selected_session'] = session_to_join
-#     print(f'DEBUG: session to join {session_to_join}')
-#
-# # Try connecting to the session we were previously connected to
-# if not recording_session:
-#     selected_session_id = st.session_state.get('selected_session', None)
-#     print(f'DEBUG: try previous {selected_session_id}')
-#     if selected_session_id:
-#         recording_session = get_persistent_state().get_extant_session(selected_session_id)
-
-# # If that fails, create one
-# if not recording_session:
-#     new_session_id = get_random_name()
-#     st.session_state['selected_session'] = new_session_id
-#     recording_session = get_persistent_state().get_or_create_session(new_session_id)
-#     print(f'Created new session: "{new_session_id}"')
-#
-# # Draw UI
-# if st.session_state.get('st_button_add_remote'):
-#     display_remote_code(recording_session)
-# else:
-#     run_muesli_listener(recording_session)
-#     with st.sidebar:
-#         draw_session_id_section(recording_session)
-#         run_muesli_recorder(recording_session)
-#         draw_debug_controls(recording_session)

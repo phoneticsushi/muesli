@@ -58,12 +58,6 @@ def run_muesli_recorder(recording_session: RecordingSession, role: RecordingSess
     st.write('The microphone will remain open until you click STOP.')
 
     st.write('You can use the "Enable Recording" checkbox on the right to start and stop recording.')
-    st.title('Remote Control')
-    st.write(f"To use this device's microphone but control recording from another device:")
-    st.markdown('1. Press START on this device\n'
-                '2. Navigate to this page from another device\n'
-                f'3. Enter the session ID "{recording_session.get_session_id()}" on the other device\n'
-                '4. Use the "Enable Recording" checkbox on the other device')
 
 
 def run_audio_processing_loop(webrtc_ctx, recording_session: RecordingSession):
