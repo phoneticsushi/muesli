@@ -10,7 +10,9 @@ def draw_qr_code(url: str):
 
 
 def draw_remote_code(access_token_id):
-    url = f'http://192.168.1.66:8501?token={access_token_id}'
+    # TODO: find a way to get the URL of the current server
+    #  from within Streamlit
+    url = f'https://share.streamlit.io/phoneticsushi/muesli/cloud-deploy/session_app.py?token={access_token_id}'
 
     st.header('To attach a device:')
     st.write('Scan this QR code on another device:')
