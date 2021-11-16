@@ -110,4 +110,4 @@ else:
     draw_muesli_viewer(recording_session, recording_role)
     with st.sidebar:
         run_muesli_recorder(recording_session, recording_role)
-        draw_debug_controls(recording_session, recording_role)
+        # draw_debug_controls(recording_session, recording_role)
