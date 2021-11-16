@@ -11,18 +11,19 @@ def draw_qr_code(url: str):
 
 def draw_remote_code(access_token_id):
     url = f'http://192.168.1.66:8501?token={access_token_id}'
+
+    st.header('To attach a device:')
+    st.write('Scan this QR code on another device:')
     draw_qr_code(url)
+    st.header('Or:')
+    st.write('Enter the following token on another device:')
+    st.title(access_token_id)
 
 
 def draw_muesli_qr_page(recording_session: RecordingSession, role_for_connecting_client: RecordingSessionRole):
     access_token_id = get_persistent_state().create_access_token(role_for_connecting_client, recording_session)
 
     st.title('Muesli (Attach a Device)')
-    st.write('Scan this QR code on another device:')
-    draw_remote_code(access_token_id)
-    st.title('OR')
-    st.header('Enter the following code on another device:')
-    st.title(access_token_id)
 
     if role_for_connecting_client is RecordingSessionRole.REMOTE:
         st.warning("You're about to connect a Remote to this session.  The remote will be able to start and stop "
@@ -34,7 +35,9 @@ def draw_muesli_qr_page(recording_session: RecordingSession, role_for_connecting
     else:
         st.info("If you can see this, it means there's an error in the code.  Who knows what will happen?")
 
-    st.info('You can always close the microphone entirely by clicking "STOP" in the sidebar')
+    st.info('This access token will expire in five minutes or after the first use.')
     if st.button('Return to the previous screen'):
         st.session_state['st_button_add_remote'] = False
         st.session_state['st_button_add_viewer'] = False
+
+    draw_remote_code(access_token_id)
