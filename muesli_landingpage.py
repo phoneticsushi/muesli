@@ -16,6 +16,6 @@ def draw_session_connection_section():
     user_access_token_id = st.session_state.get('last_access_token_tried', None)
     # Print nothing if no session is specified
     if user_access_token_id:
-        st.error(f'Token "{user_access_token_id}" has expired or does not exist')
+        st.error(f'Token "{user_access_token_id}" has expired, has already been used, or never existed in the first place')
 
 

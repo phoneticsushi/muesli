@@ -79,19 +79,14 @@ if st.session_state.get('should_create_new_session', None):
     st.session_state['recording_session_role'] = RecordingSessionRole.AUDIO_SOURCE
 
 
-# If client not already bound to a session, try any access token the user may have entered
-if 'recording_session' not in st.session_state.keys() and 'recording_session_role' not in st.session_state.keys():
-    try_setting_session_from_token_id(st.session_state.get('last_access_token_tried', None))
-
-
-# If that didn't work, try any session entered as URL parameters:
+# Try any session entered as URL parameters first, otherwise try anything the user may have entered:
 if 'recording_session' not in st.session_state.keys() and 'recording_session_role' not in st.session_state.keys():
     token_params = st.experimental_get_query_params().get('token', None)
     if token_params:
         # Comes in as list - use the first param specified
-        try_setting_session_from_token_id(token_params[0])
-    # TODO: fix bug whereby expired / incorrect tokens
-    #   won't generate a warning to the user
+        st.session_state['last_access_token_tried'] = token_params[0]
+        st.experimental_set_query_params()
+    try_setting_session_from_token_id(st.session_state.get('last_access_token_tried', None))
 
 
 recording_session = st.session_state.get('recording_session', None)
