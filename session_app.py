@@ -70,7 +70,7 @@ def try_setting_session_from_token_id(access_token_id: str):
 # Draw Page
 
 st.set_page_config(
-    page_title=None,
+    page_title='Muesli Practice Helper',
     page_icon=None,
     layout='wide',
     initial_sidebar_state='auto',
