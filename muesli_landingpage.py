@@ -3,6 +3,10 @@ import streamlit as st
 
 def draw_muesli_landingpage():
     st.title('Muesli Practice Helper')
+    st.warning('Muesli is under development and may go down at any time.')
+    st.error('When Muesli goes down, all sessions and their recordings are deleted.  '
+             'Please download any recordings you wish to keep.')
+    st.info('( Hoping to remedy this sometime in the future )')
     st.header('Start a New Recording Session')
     st.button('Start a New Session', key="should_create_new_session")
     st.title('OR')
