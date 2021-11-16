@@ -10,7 +10,7 @@ import queue
 import threading
 import time
 
-from recording_session import RecordingSession
+from recording_session import RecordingSession, RecordingSessionRole
 
 from streamlit_webrtc import (
     RTCConfiguration,
@@ -20,7 +20,13 @@ from streamlit_webrtc import (
 
 """ Places this instance into Recording Mode
 """
-def run_muesli_recorder(recording_session: RecordingSession):
+def run_muesli_recorder(recording_session: RecordingSession, role: RecordingSessionRole):
+    if role is not RecordingSessionRole.AUDIO_SOURCE:
+        st.title('Microphone Disabled')
+        st.info('Any microphones must be connected the device that created the recording session')
+        return
+
+
     # TODO: move these?
     # Use Google STUN server
     RTC_CONFIGURATION = RTCConfiguration(

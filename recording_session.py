@@ -3,6 +3,13 @@ import threading
 from typing import *
 from containers import *
 import streamlit as st
+from enum import Enum
+
+
+class RecordingSessionRole(Enum):
+    AUDIO_SOURCE = 1
+    REMOTE = 2
+    VIEWER = 3
 
 
 # All functions of this class must be threadsafe

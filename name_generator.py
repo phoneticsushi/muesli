@@ -19,5 +19,11 @@
 import secrets
 
 
-def get_random_name():
+def get_random_token():
     return secrets.token_hex(3).upper()
+
+
+# FIXME: replace with words
+def get_random_name():
+    return get_random_token()
+
