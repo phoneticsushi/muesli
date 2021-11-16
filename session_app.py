@@ -13,6 +13,10 @@ from name_generator import get_random_name
 
 
 def draw_debug_controls(recording_session: RecordingSession, role: RecordingSessionRole):
+    if role is not RecordingSessionRole.AUDIO_SOURCE:
+        # Only draw debug controls for primary client as they can be used for semi-nefarious purposes
+        return
+
     st.title('DEBUG Interface')
 
     st.title("This Recording Session's ID")
